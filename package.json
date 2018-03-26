@@ -1,0 +1,23 @@
+{
+  "name": "nes-emulator",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/li-plaintext/nes-emulator-js.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/li-plaintext/nes-emulator-js/issues"
+  },
+  "homepage": "https://github.com/li-plaintext/nes-emulator-js#readme",
+  "dependencies": {
+    "express": "^4.16.3"
+  }
+}
