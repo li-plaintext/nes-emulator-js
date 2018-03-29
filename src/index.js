@@ -4,6 +4,13 @@ function NES() {
   this.offset = 0;
   this.constants = new Constants();
 
+  this.a = new Uint8Array(8);
+  this.x = new Uint8Array(8);
+  this.y = new Uint8Array(8);
+  this.pc = new Uint8Array(16);
+  this.s = new Uint8Array(8);
+  this.p = new Uint8Array(8);
+
 
   this.run = function(buffer) {
     var header = this.analyzerRom(buffer);
@@ -31,10 +38,7 @@ function NES() {
   this.processInstruction = function(header, buffer) {
     var PRG_Rom = new Uint8Array(buffer.slice(16, 16 + (this.length16K * header.PRG_ROM_num))) ;
 
-    console.log(PRG_Rom);
-
     while(this.offset < PRG_Rom.length) {
-
       switch(this.constants.opcodes[PRG_Rom[this.offset]].instruction){
         case 'ADC':
           console.log('ADC');
@@ -116,22 +120,30 @@ function NES() {
         case 'INC': console.log('INC'); break;
         case 'INX': console.log('INX'); break;
         case 'INY': console.log('INY'); break;
+
         case 'JMP': console.log('JMP'); break;
         case 'JSR': console.log('JSR'); break;
+
         case 'LDA': console.log('LDA'); break;
-        case 'LDX': console.log('LDX'); break;
+        case 'LDY': console.log('LDY'); break;
         case 'LDX': console.log('LDX'); break;
         case 'LSR': console.log('LSR'); break;
+
         case 'NOP': console.log('NOP'); break;
+
         case 'ORA': console.log('ORA'); break;
+
         case 'PHA': console.log('PHA'); break;
         case 'PHP': console.log('PHP'); break;
+
         case 'PLA': console.log('PLA'); break;
         case 'PLP': console.log('PLP'); break;
+
         case 'ROL': console.log('ROL'); break;
         case 'ROR': console.log('ROR'); break;
         case 'RTI': console.log('RTI'); break;
         case 'RTS': console.log('RTS'); break;
+
         case 'SBC': console.log('SBC'); break;
         case 'SEC': console.log('SEC'); break;
         case 'SED': console.log('SED'); break;
@@ -139,17 +151,88 @@ function NES() {
         case 'STA': console.log('STA'); break;
         case 'STX': console.log('STX'); break;
         case 'STY': console.log('STY'); break;
+
         case 'TAX': console.log('TAX'); break;
         case 'TAY': console.log('TAY'); break;
         case 'TSX': console.log('TSX'); break;
         case 'TXA': console.log('TXA'); break;
         case 'TXS': console.log('TXS'); break;
         case 'TYA': console.log('TYA'); break;
-        default: break;
+
+        case 'INV': console.log('do nothing'); break;
+        default: console.log('missing', PRG_Rom[this.offset]) ;break;
       }
+
+      this.processAddressingMode(this.constants.opcodes[PRG_Rom[this.offset]].addressing);
 
       this.offset++;
     };
+  }
+
+
+  this.processAddressingMode = function(addressingMode) {
+
+    switch(addressingMode){
+      case 'IMPLIED':
+        // Bytes 1
+        break;
+      case 'IMMEDIATE':
+        // Bytes 2
+        this.offset += 1;
+        break;
+
+      case 'ACCUMULATOR':
+        // Bytes 1
+        break;
+
+      case 'ZERO_PAGE':
+        // Bytes 2
+        this.offset += 1;
+
+      break;
+
+      case 'ABSOLUTE':
+        // Bytes 3
+        this.offset += 2;
+        break;
+      case 'INDEXED_ABSOLUTE_X':
+        // Bytes 3
+        this.offset += 2;
+        break;
+      case 'INDEXED_ABSOLUTE_Y':
+        // Bytes 3
+        this.offset += 2;
+        break;
+
+      case 'RELATIVE':
+        // Bytes 2
+        this.offset += 1;
+        break;
+
+      case 'INDEXED_INDIRECT_X':
+        // Bytes 2
+        this.offset += 1;
+
+        break;
+      case 'INDEXED_INDIRECT_Y':
+        // Bytes 2
+        this.offset += 1;
+
+        break;
+
+      case 'INDEXED_ZERO_PAGE_X':
+        // Bytes 2
+        this.offset += 1;
+
+        break;
+      case 'INDEXED_ZERO_PAGE_Y':
+        // Bytes 2
+        this.offset += 1;
+
+        break;
+
+      default: break;
+    }
   }
 
 }
