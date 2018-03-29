@@ -7,8 +7,8 @@ app.get('/', function(req, res){
   res.sendFile(__dirname + '/index.html');
 });
 
-app.get('/src/index.js', function(req, res){
-  res.sendFile(__dirname + '/src/index.js');
+app.get('/src/:file', function(req, res){
+  res.sendFile(__dirname + '/src/' + req.params.file);
 });
 
 app.get('/roms/:file', function(req, res){

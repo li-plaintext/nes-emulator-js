@@ -3,6 +3,7 @@
   <head>
     <meta charset="utf-8">
     <script type="text/javascript" src="src/index.js" ></script>
+    <script type="text/javascript" src="src/Constants.js" ></script>
     <title></title>
   </head>
   <body>
@@ -11,6 +12,14 @@
   <script type="text/javascript">
     var nes = new NES();
 
-    nes.print();
+    fetch('http://localhost:3000/roms/test.nes',
+    { headers: {
+       'Content-Type': 'image/jpeg'
+    }})
+    .then((response) => {
+      response.arrayBuffer().then(function(buffer) {
+        nes.run(buffer)
+      });
+    });
   </script>
 </html>
