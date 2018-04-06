@@ -65,46 +65,88 @@ function NES() {
     switch(opcObj.instruction){
       case 'ADC':
         debug('ADC');
+        var regVal = this.a;
+        var memValue = this.readMemory(this.processAddressingMode(opcObj.addressing));
+        var flagC = this.getStatusRegister('C');
+        var result = regVal + memValue + flagC;
+        this.a = result;
+        this.flagC(result);
+        this.flagZ(result);
+        this.flagN(result);
+        if(!((regVal ^ memValue) & 0x80) && ((memValue ^ result) & 0x80))
+          this.setStatusRegister('V', 1);
+        else
+          this.setStatusRegister('V', 1);
         break;
       case 'AND':
-        debug('ADC');
+        debug('AND');
+        var regVal = this.a;
+        var memValue = this.readMemory(this.processAddressingMode(opcObj.addressing));
+        var result = regVal & memValue;
+        this.a = result;
+        this.flagZ(result);
+        this.flagN(result);
         break;
       case 'ASL':
+        // arithemetic shift left
         debug('ASL');
+        var memValue = this.readMemory(this.processAddressingMode(opcObj.addressing));
+        var result = memValue << 1;
+        this.a = result;
+        this.flagZ(result);
+        this.flagN(result);
+        this.flagC(result);
         break;
 
       case 'BCC':
         debug('BCC');
+        if(this.getStatusRegister('C') === 0) {
+          var memValue = this.readMemory(this.processAddressingMode(opcObj.addressing));
+          this.pc += memValue;
+        }
         break;
       case 'BCS':
         debug('BCS');
+        if(this.getStatusRegister('C') === 1) {
+          var memValue = this.readMemory(this.processAddressingMode(opcObj.addressing));
+          this.pc += memValue;
+        }
         break;
       case 'BEQ':
         debug('BEQ');
+        if(this.getStatusRegister('Z') === 1) {
+          var memValue = this.readMemory(this.processAddressingMode(opcObj.addressing));
+          this.pc += memValue;
+        }
         break;
       case 'BIT':
         debug('BIT');
-        var aValue = this.a;
+        var regVal = this.a;
         var memValue = this.readMemory(this.processAddressingMode(opcObj.addressing));
-        var result = aValue & memValue;
+        var result = regVal & memValue;
         this.FlagN(memValue);
         this.FlagZ(result);
         this.FlagV(memValue);
         break;
       case 'BMI':
         debug('BMI');
+        if(this.getStatusRegister('N') === 1) {
+          var memValue = this.readMemory(this.processAddressingMode(opcObj.addressing));
+          this.pc += memValue;
+        }
         break;
       case 'BNE':
         debug('BNE');
+        if(this.getStatusRegister('Z') === 0) {
+          var memValue = this.readMemory(this.processAddressingMode(opcObj.addressing));
+          this.pc += memValue;
+        }
         break;
       case 'BPL':
         debug('BPL');
-        var memValue = this.readMemory(this.processAddressingMode(opcObj.addressing));
-        var flagN = this.getStatusRegister('N');
-
-        if(memValue & 0x80) memValue |= 0xff00;
-
-        if(flagN === 0) {
+        if(this.getStatusRegister('N') === 0) {
+          var memValue = this.readMemory(this.processAddressingMode(opcObj.addressing));
+          if(memValue & 0x80) memValue |= 0xff00;
           this.pc += memValue;
         }
         break;
@@ -115,105 +157,257 @@ function NES() {
         break;
       case 'BVC':
         debug('BVC');
+        if(this.getStatusRegister('V') === 0) {
+          var memValue = this.readMemory(this.processAddressingMode(opcObj.addressing));
+          this.pc += memValue;
+        }
         break;
       case 'BVS':
         debug('BVS');
+        if(this.getStatusRegister('V') === 1) {
+          var memValue = this.readMemory(this.processAddressingMode(opcObj.addressing));
+          this.pc += memValue;
+        }
         break;
       case 'CLC':
         debug('CLC');
+        this.setStatusRegister('C', 0);
         break;
       case 'CLD':
         debug('CLD');
+        this.setStatusRegister('D', 0);
         break;
       case 'CLI':
         debug('CLI');
+        this.setStatusRegister('I', 0);
         break;
       case 'CLV':
         debug('CLV');
+        this.setStatusRegister('V', 0);
         break;
+
       case 'CMP':
         debug('CMP');
+        var regVal = this.a;
+        var memValue = this.readMemory(this.processAddressingMode(opcObj.addressing));
+        var result = regVal - memValue;
+        this.flagZ(result);
+        this.flagN(result);
+        if(result >= 0)
+          this.setStatusRegister('C', 1);
+        else
+          this.setStatusRegister('C', 0);
         break;
       case 'CPX':
         debug('CPX');
+        var regVal = this.x;
+        var memValue = this.readMemory(this.processAddressingMode(opcObj.addressing));
+        var result = regVal - memValue;
+        this.flagZ(result);
+        this.flagN(result);
+        if(result >= 0)
+          this.setStatusRegister('C', 1);
+        else
+          this.setStatusRegister('C', 0);
         break;
       case 'CPY':
         debug('CPY');
+        var regVal = this.y;
+        var memValue = this.readMemory(this.processAddressingMode(opcObj.addressing));
+        var result = regVal - memValue;
+        this.flagZ(result);
+        this.flagN(result);
+        if(result >= 0)
+          this.setStatusRegister('C', 1);
+        else
+          this.setStatusRegister('C', 0);
         break;
       case 'DEC':
         debug('DEC');
+        var memAddr = this.processAddressingMode(opcObj.addressing);
+        var memValue = this.readMemory(memAddr);
+        var result = memValue - 1;
+        this.writeMemory(memAddr, result);
+        this.flagZ(result);
+        this.flagN(result);
         break;
+
       case 'DEX':
         debug('DEX');
+        var regVal = this.x;
+        var result = regVal - 1;
+        this.x = result;
+        this.flagZ(result);
+        this.flagN(result);
         break;
       case 'DEY':
         debug('DEY');
+        var regVal = this.y;
+        var result = regVal - 1;
+        this.y = result;
+        this.flagZ(result);
+        this.flagN(result);
         break;
 
       case 'EOR':
         debug('EOR');
+        var regVal = this.a;
+        var memValue = this.readMemory(this.processAddressingMode(opcObj.addressing));
+        var result = regVal ^ memValue;
+        this.flagZ(result);
+        this.flagN(result);
         break;
 
-      case 'INC': debug('INC'); break;
-
+      case 'INC':
+        debug('INC');
+        var memAddr = this.processAddressingMode(opcObj.addressing);
+        var memValue = this.readMemory(memAddr);
+        var result = memValue + 1;
+        this.writeMemory(memAddr, result);
+        this.flagZ(result);
+        this.flagN(result);
+        break;
       case 'INX':
         debug('INX');
-        this.x++;
-        this.FlagN(value);
-        this.FlagZ(value);
+        var regVal = this.x;
+        var result = regVal + 1;
+        this.x = result;
+        this.flagZ(result);
+        this.flagN(result);
         this.processAddressingMode(opcObj.addressing)
         break;
-      case 'INY': debug('INY');
-        this.y++;
-        this.FlagN(value);
-        this.FlagZ(value);
+      case 'INY':
+        debug('INY');
+        var regVal = this.y;
+        var result = regVal + 1;
+        this.y = result;
+        this.flagZ(result);
+        this.flagN(result);
         this.processAddressingMode(opcObj.addressing)
         break;
 
-      case 'JMP': debug('JMP'); break;
-      case 'JSR': debug('JSR'); break;
+      case 'JMP':
+        debug('JMP');
+        var memValue = this.readMemory(this.processAddressingMode(opcObj.addressing));
+        this.pc = memValue;
+        break;
+      case 'JSR':
+        debug('JSR');
+        var toStoreAddr = this.pc - 1;
+        //TODO push to stack
 
-      case 'LDA': debug('LDA'); break;
-      case 'LDY': debug('LDY'); break;
+        var memAddr = this.processAddressingMode(opcObj.addressing);
+        this.pc.store(memAddr);
+        break;
+      case 'LDA':
+        debug('LDA');
+        var value =  this.readMemory(this.processAddressingMode(opcObj.addressing));
+        this.a = value;
+        this.FlagN(value);
+        this.FlagZ(value);
+        break;
+      case 'LDY':
+        debug('LDY');
+        var value =  this.readMemory(this.processAddressingMode(opcObj.addressing));
+        this.y = value;
+        this.FlagN(value);
+        this.FlagZ(value);
+        break;
       case 'LDX':
         debug('LDX');
-        this.dumpP();
         var value =  this.readMemory(this.processAddressingMode(opcObj.addressing));
         this.x = value;
         this.FlagN(value);
         this.FlagZ(value);
         break;
-      case 'LSR': debug('LSR'); break;
+      case 'LSR':
+        debug('LSR');
+        var memAddr = this.processAddressingMode(opcObj.addressing);
+        var memValue = this.readMemory(memAddr);
+        var result = memValue >> 1;
+        this.writeMemory(memAddr, result)
+        this.getStatusRegister('N', 0);
+        this.FlagZ(result);
+        if((memValue & 1) == 0)
+          this.getStatusRegister('C', 0);
+        else
+          this.getStatusRegister('C', 1);
+        break;
 
-      case 'NOP': debug('NOP'); break;
+      case 'NOP':
+        // no operation
+        debug('NOP');
+        break;
 
-      case 'ORA': debug('ORA'); break;
+      case 'ORA':
+        debug('ORA');
+        var regVal = this.a;
+        var memValue = this.readMemory(this.processAddressingMode(opcObj.addressing));
+        var result = regVal | memValue;
+        this.a = result
+        this.flagZ(result);
+        this.flagN(result);
+        break;
 
-      case 'PHA': debug('PHA'); break;
-      case 'PHP': debug('PHP'); break;
+      case 'PHA':
+        debug('PHA');
+        var regVal = this.a;
+        //TODO push a to stack
+        break;
+      case 'PHP':
+        debug('PHP');
+        this.setStatusRegister('A',1);
+        this.setStatusRegister('B',1);
+        var regVal = this.p;
+        //TODO push a to stack
+        break;
 
-      case 'PLA': debug('PLA'); break;
-      case 'PLP': debug('PLP'); break;
+      case 'PLA':
+        debug('PLA');
+        //TODO pop from stack
+
+        break;
+      case 'PLP':
+        debug('PLP');
+        //TODO pop from stack
+        break;
 
       case 'ROL': debug('ROL'); break;
       case 'ROR': debug('ROR'); break;
       case 'RTI': debug('RTI'); break;
       case 'RTS': debug('RTS'); break;
 
-      case 'SBC': debug('SBC'); break;
-      case 'SEC': debug('SEC'); break;
-      case 'SED': debug('SED'); break;
-      case 'SEI':
-        this.setStatusRegisterFlag('I', 1);
-        debug('SEI');
+      case 'SBC':
+        debug('SBC');
         break;
-      case 'STA': debug('STA'); break;
+      case 'SEC':
+        debug('SEC');
+        this.setStatusRegisterFlag('C', 1);
+        break;
+      case 'SED':
+        debug('SED');
+        this.setStatusRegisterFlag('D', 1);
+        break;
+      case 'SEI':
+        debug('SEI');
+        this.setStatusRegisterFlag('I', 1);
+        break;
+
+      case 'STA':
+        debug('STA');
+        var memAddr = this.processAddressingMode(opcObj.addressing);
+        this.writeMemory(memAddr, this.a);
+        break;
       case 'STX':
         debug('STX');
         var memAddr = this.processAddressingMode(opcObj.addressing);
         this.writeMemory(memAddr, this.x);
         break;
-      case 'STY': debug('STY'); break;
+      case 'STY':
+        debug('STY');
+        var memAddr = this.processAddressingMode(opcObj.addressing);
+        this.writeMemory(memAddr, this.y);
+        break;
 
       case 'TAX': debug('TAX'); break;
       case 'TAY': debug('TAY'); break;
@@ -232,8 +426,6 @@ function NES() {
 
       default: debug('missing') ;break;
     }
-
-    this.dumpCPU();
 
   }
 
