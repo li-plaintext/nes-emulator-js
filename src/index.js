@@ -89,7 +89,7 @@ function NES() {
         var result = aValue & memValue;
         this.FlagN(memValue);
         this.FlagZ(result);
-        this.FlagV(result);
+        this.FlagV(memValue);
         break;
       case 'BMI':
         debug('BMI');
@@ -99,11 +99,19 @@ function NES() {
         break;
       case 'BPL':
         debug('BPL');
+        var memValue = this.readMemory(this.processAddressingMode(opcObj.addressing));
+        var flagN = this.getStatusRegister('N');
+
+        if(memValue & 0x80) memValue |= 0xff00;
+
+        if(flagN === 0) {
+          this.pc += memValue;
+        }
         break;
       case 'BRK':
         this.setStatusRegisterFlag('B', 1);
         this.increasePC();
-        // debug('BRK');
+        debug('BRK');
         break;
       case 'BVC':
         debug('BVC');
@@ -169,6 +177,7 @@ function NES() {
       case 'LDY': debug('LDY'); break;
       case 'LDX':
         debug('LDX');
+        this.dumpP();
         var value =  this.readMemory(this.processAddressingMode(opcObj.addressing));
         this.x = value;
         this.FlagN(value);
@@ -209,18 +218,22 @@ function NES() {
       case 'TAX': debug('TAX'); break;
       case 'TAY': debug('TAY'); break;
       case 'TSX':
-        this.s = this.a;
-        this.processAddressingMode(opcObj.addressing);
         debug('TSX');
         break;
       case 'TXA': debug('TXA'); break;
-      case 'TXS': debug('TXS'); break;
+      case 'TXS':
+        debug('TXS');
+        this.s = this.a;
+        this.processAddressingMode(opcObj.addressing);
+        break;
       case 'TYA': debug('TYA'); break;
 
       case 'INV': debug('do nothing'); break;
 
       default: debug('missing') ;break;
     }
+
+    this.dumpCPU();
 
   }
 
@@ -232,10 +245,8 @@ function NES() {
       case 'IMMEDIATE':
         // Bytes 2
         debug('IMMEDIATE bytes');
-
         var currentArr = this.getPC();
         this.increasePC();
-
         return currentArr;
         break;
 
@@ -265,7 +276,10 @@ function NES() {
 
       case 'RELATIVE':
         // Bytes 2
-        debug('RELATIVE bytes', this.rom.prg[++this.offset]);
+        debug('RELATIVE bytes');
+        var currentArr = this.getPC();
+        this.increasePC();
+        return currentArr;
         break;
 
       case 'INDIRECT':
@@ -334,14 +348,14 @@ function NES() {
      this.p[this.statusMapping[indicator]] = value;
   }
   this.getStatusRegister = function(indicator) {
-     return this.p[indicator];
+     return this.p[this.statusMapping[indicator]];
   }
 
   this.FlagZ = function(value){
     if((value & 0xff) === 0)
-      this.setStatusRegisterFlag('Z', 0);
-    else
       this.setStatusRegisterFlag('Z', 1);
+    else
+      this.setStatusRegisterFlag('Z', 0);
   }
 
   this.FlagN = function(value) {
@@ -356,6 +370,13 @@ function NES() {
       this.setStatusRegisterFlag('V', 0);
     else
       this.setStatusRegisterFlag('V', 1);
+  }
+
+  this.FlagC = function(value) {
+    if((value & (1<<8)) === 0)
+      this.setStatusRegisterFlag('C', 0);
+    else
+      this.setStatusRegisterFlag('C', 1);
   }
 
   this.getPC = function() {
@@ -381,6 +402,7 @@ function NES() {
 
       if(address >= 0 && address < 0x2000){
         debug('readMemory address >= 0 && address < 0x2000');
+        return 0;
       }
 
       // 0x2000 - 0x2007: PPU registers
@@ -388,6 +410,7 @@ function NES() {
 
       if(address >= 0x2000 && address < 0x4000){
         debug('readMemory address >= 0x2000 && address < 0x4000');
+        return 0;
       }
 
       // 0x4000 - 0x4017: APU, PPU and I/O registers
@@ -395,39 +418,39 @@ function NES() {
 
       if(address >= 0x4000 && address < 0x4014){
         debug('readMemory address >= 0x4000 && address < 0x4014');
-
+        return 0;
       }
 
       if(address === 0x4014){
         debug('readMemory address === 0x4014');
-
+        return 0;
       }
 
       if(address === 0x4015){
         debug('readMemory address === 0x4015');
-
+        return 0;
       }
 
       if(address === 0x4016){
         debug('readMemory address === 0x4016');
-
+        return 0;
       }
 
       if(address >= 0x4017 && address < 0x4020){
         debug('readMemory address >= 0x4017 && address < 0x4020');
-
+        return 0;
       }
 
       // cartridge space
       if(address >= 0x4020 && address < 0x6000){
         debug('readMemory address >= 0x4020 && address < 0x6000');
-
+        return 0;
       }
 
       // 0x6000 - 0x7FFF: Battery Backed Save or Work RAM
       if(address >= 0x6000 && address < 0x8000){
         debug('readMemory address >= 0x6000 && address < 0x8000');
-
+        return 0;
       }
 
       // 0x8000 - 0xFFFF: ROM
@@ -515,10 +538,14 @@ function NES() {
     console.log('this.a ->', this.a);
     console.log('this.x ->', this.x);
     console.log('this.y ->', this.y);
-    console.log('this.p ->', this.p);
+    console.log('this.p ->', parseInt(([].concat(this.p)).reverse().join(''), 2));
     console.log('this.pc ->', this.pc);
     console.log('this.s ->', this.s);
     console.log('this.rom ->', this.rom);
+  }
+
+  this.dumpP = function(){
+    console.log('this.p ->', parseInt(([].concat(this.p)).reverse().join(''), 2));
   }
 }
 
