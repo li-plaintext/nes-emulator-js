@@ -124,9 +124,9 @@ function NES() {
         var regVal = this.a;
         var memValue = this.readMemory(this.processAddressingMode(opcObj.addressing));
         var result = regVal & memValue;
-        this.FlagN(memValue);
-        this.FlagZ(result);
-        this.FlagV(memValue);
+        this.flagN(memValue);
+        this.flagZ(result);
+        this.flagV(memValue);
         break;
       case 'BMI':
         debug('BMI');
@@ -303,22 +303,22 @@ function NES() {
         debug('LDA');
         var value =  this.readMemory(this.processAddressingMode(opcObj.addressing));
         this.a = value;
-        this.FlagN(value);
-        this.FlagZ(value);
+        this.flagN(value);
+        this.flagZ(value);
         break;
       case 'LDY':
         debug('LDY');
         var value =  this.readMemory(this.processAddressingMode(opcObj.addressing));
         this.y = value;
-        this.FlagN(value);
-        this.FlagZ(value);
+        this.flagN(value);
+        this.flagZ(value);
         break;
       case 'LDX':
         debug('LDX');
         var value =  this.readMemory(this.processAddressingMode(opcObj.addressing));
         this.x = value;
-        this.FlagN(value);
-        this.FlagZ(value);
+        this.flagN(value);
+        this.flagZ(value);
         break;
       case 'LSR':
         debug('LSR');
@@ -327,7 +327,7 @@ function NES() {
         var result = memValue >> 1;
         this.writeMemory(memAddr, result)
         this.getStatusRegister('N', 0);
-        this.FlagZ(result);
+        this.flagZ(result);
         if((memValue & 1) == 0)
           this.getStatusRegister('C', 0);
         else
@@ -372,13 +372,54 @@ function NES() {
         //TODO pop from stack
         break;
 
-      case 'ROL': debug('ROL'); break;
-      case 'ROR': debug('ROR'); break;
+      case 'ROL':
+        debug('ROL');
+        var memAddr = this.processAddressingMode(opcObj.addressing);
+        var memValue = this.readMemory(memAddr);
+        var c = this.getStatusRegister('C');
+        var result = (memValue << 1) | c;
+        this.writeMemory(memAddr, result);
+        this.flagC(result);
+        this.flagZ(result);
+        this.flagN(result);
+        break;
+      case 'ROR':
+        debug('ROR');
+        var memAddr = this.processAddressingMode(opcObj.addressing);
+        var memValue = this.readMemory(memAddr);
+        var c = this.getStatusRegister('C');
+        var result = (memValue >> 1) | c;
+        this.writeMemory(memAddr, result);
+        this.flagZ(result);
+        this.flagN(result);
+        if((memValue & 1) == 0)
+          this.setStatusRegister('C', 0);
+        else
+          this.setStatusRegister('C', 1);
+        break;
+
       case 'RTI': debug('RTI'); break;
       case 'RTS': debug('RTS'); break;
 
       case 'SBC':
         debug('SBC');
+        var regVal = this.a;
+        var memValue = this.readMemory(this.processAddressingMode(opcObj.addressing));
+        var c = this.getStatusRegister('C');
+        var result = regVal - memValue - c;
+        this.a = result;
+        this.flagN(memValue);
+        this.flagZ(result);
+        if(regVal >= memValue + c)
+          this.setStatusRegister('C', 1);
+        else
+          this.setStatusRegister('C', 0);
+
+        if(((regVal ^ result) & 0x80) && ((regVal ^ memValue) & 0x80))
+          this.setStatusRegister('V', 1);
+        else
+          this.setStatusRegister('V', 0);
+
         break;
       case 'SEC':
         debug('SEC');
@@ -409,18 +450,46 @@ function NES() {
         this.writeMemory(memAddr, this.y);
         break;
 
-      case 'TAX': debug('TAX'); break;
-      case 'TAY': debug('TAY'); break;
-      case 'TSX':
-        debug('TSX');
-        break;
-      case 'TXA': debug('TXA'); break;
-      case 'TXS':
-        debug('TXS');
-        this.s = this.a;
+      case 'TAX':
+        debug('TAX');
+        this.x = this.a;
+        this.updateN(this.a);
+        this.updateZ(this.a);
         this.processAddressingMode(opcObj.addressing);
         break;
-      case 'TYA': debug('TYA'); break;
+      case 'TAY':
+        debug('TAY');
+        this.x = this.y;
+        this.updateN(this.y);
+        this.updateZ(this.y);
+        this.processAddressingMode(opcObj.addressing);
+        break;
+      case 'TSX':
+        debug('TSX');
+        this.s = this.x;
+        this.updateN(this.x);
+        this.updateZ(this.x);
+        this.processAddressingMode(opcObj.addressing);
+        break;
+      case 'TXA':
+        debug('TXA');
+        this.a = this.x;
+        this.updateN(this.x);
+        this.updateZ(this.x);
+        this.processAddressingMode(opcObj.addressing);
+        break;
+      case 'TXS':
+        debug('TXS');
+        this.s = this.x;
+        this.processAddressingMode(opcObj.addressing);
+        break;
+      case 'TYA':
+        debug('TYA');
+        this.a = this.y;
+        this.updateN(this.y);
+        this.updateZ(this.y);
+        this.processAddressingMode(opcObj.addressing);
+        break;
 
       case 'INV': debug('do nothing'); break;
 
@@ -543,28 +612,28 @@ function NES() {
      return this.p[this.statusMapping[indicator]];
   }
 
-  this.FlagZ = function(value){
+  this.flagZ = function(value){
     if((value & 0xff) === 0)
       this.setStatusRegisterFlag('Z', 1);
     else
       this.setStatusRegisterFlag('Z', 0);
   }
 
-  this.FlagN = function(value) {
+  this.flagN = function(value) {
     if((value & (1<<7)) === 0)
       this.setStatusRegisterFlag('N', 0);
     else
       this.setStatusRegisterFlag('N', 1);
   }
 
-  this.FlagV = function(value) {
+  this.flagV = function(value) {
     if((value & (1<<6)) === 0)
       this.setStatusRegisterFlag('V', 0);
     else
       this.setStatusRegisterFlag('V', 1);
   }
 
-  this.FlagC = function(value) {
+  this.flagC = function(value) {
     if((value & (1<<8)) === 0)
       this.setStatusRegisterFlag('C', 0);
     else
@@ -588,13 +657,49 @@ function NES() {
      return ++this.pc;
   }
 
+  this.increaseS = function() {
+     return ++this.s;
+  }
+  this.decreaseS = function() {
+     return --this.s;
+  }
+  this.pushToStack = function(value) {
+    var stackAddr = this.s + 0x100;
+    this.writeMemory(stackAddr, value);
+    this.decreaseS();
+  }
+  this.pullFromStack = function() {
+    this.increaseS();
+    var stackAddr = this.s + 0x100;
+    return this.readMemory(stackAddr);
+  }
+  this.pushToStackBy2Bytes = function(value) {
+    var hightByte = value & 0xff;
+    var lowByte = (value >> 8) & 0xff;
+    var stackAddr = this.s + 0x100;
+    this.writeMemory(stackAddr, lowByte);
+    this.decreaseS();
+    stackAddr = this.s + 0x100;
+    this.writeMemory(stackAddr, hightByte);
+    this.decreaseS();
+  }
+  this.pullFromStackBy2Bytes = function() {
+    this.increaseS();
+    var stackAddr = this.s + 0x100;
+    var hightByte = this.readMemory(stackAddr);
+    this.increaseS();
+    stackAddr = this.s + 0x100;
+    var lowByte = this.readMemory(stackAddr);
+    return (lowByte << 8) | highByte;
+  }
+
   this.readMemory = function (address) {
       // 0x0000 - 0x07FF: 2KB internal RAM
       // 0x0800 - 0x1FFF: Mirrors of 0x0000 - 0x07FF (repeats every 0x800 bytes)
 
       if(address >= 0 && address < 0x2000){
         debug('readMemory address >= 0 && address < 0x2000');
-        return 0;
+        return this.momery[address];
       }
 
       // 0x2000 - 0x2007: PPU registers
@@ -602,7 +707,7 @@ function NES() {
 
       if(address >= 0x2000 && address < 0x4000){
         debug('readMemory address >= 0x2000 && address < 0x4000');
-        return 0;
+        return this.momery[address];
       }
 
       // 0x4000 - 0x4017: APU, PPU and I/O registers
@@ -610,39 +715,39 @@ function NES() {
 
       if(address >= 0x4000 && address < 0x4014){
         debug('readMemory address >= 0x4000 && address < 0x4014');
-        return 0;
+        return this.momery[address];
       }
 
       if(address === 0x4014){
         debug('readMemory address === 0x4014');
-        return 0;
+        return this.momery[address];
       }
 
       if(address === 0x4015){
         debug('readMemory address === 0x4015');
-        return 0;
+        return this.momery[address];
       }
 
       if(address === 0x4016){
         debug('readMemory address === 0x4016');
-        return 0;
+        return this.momery[address];
       }
 
       if(address >= 0x4017 && address < 0x4020){
         debug('readMemory address >= 0x4017 && address < 0x4020');
-        return 0;
+        return this.momery[address];
       }
 
       // cartridge space
       if(address >= 0x4020 && address < 0x6000){
         debug('readMemory address >= 0x4020 && address < 0x6000');
-        return 0;
+        return this.momery[address];
       }
 
       // 0x6000 - 0x7FFF: Battery Backed Save or Work RAM
       if(address >= 0x6000 && address < 0x8000){
         debug('readMemory address >= 0x6000 && address < 0x8000');
-        return 0;
+        return this.momery[address];
       }
 
       // 0x8000 - 0xFFFF: ROM
@@ -654,12 +759,13 @@ function NES() {
       }
   }
 
-  this.writeMemory = function (address) {
+  this.writeMemory = function (address, value) {
       // 0x0000 - 0x07FF: 2KB internal RAM
       // 0x0800 - 0x1FFF: Mirrors of 0x0000 - 0x07FF (repeats every 0x800 bytes)
 
       if(address >= 0 && address < 0x2000){
         debug('writeMemory address >= 0 && address < 0x2000');
+        this.momery[address] = value;
       }
 
       // 0x2000 - 0x2007: PPU registers
@@ -667,6 +773,7 @@ function NES() {
 
       if(address >= 0x2000 && address < 0x4000){
         debug('writeMemory address >= 0x2000 && address < 0x4000');
+        this.momery[address] = value;
       }
 
       // 0x4000 - 0x4017: APU, PPU and I/O registers
@@ -674,44 +781,46 @@ function NES() {
 
       if(address >= 0x4000 && address < 0x4014){
         debug('writeMemory address >= 0x4000 && address < 0x4014');
-
+        this.momery[address] = value;
       }
 
       if(address === 0x4014){
         debug('writeMemory address === 0x4014');
-
+        this.momery[address] = value;
       }
 
       if(address === 0x4015){
         debug('writeMemory address === 0x4015');
-
+        this.momery[address] = value;
       }
 
       if(address === 0x4016){
         debug('writeMemory address === 0x4016');
-
+        this.momery[address] = value;
       }
 
       if(address >= 0x4017 && address < 0x4020){
         debug('writeMemory address >= 0x4017 && address < 0x4020');
-
+        this.momery[address] = value;
       }
 
       // cartridge space
       if(address >= 0x4020 && address < 0x6000){
         debug('writeMemory address >= 0x4020 && address < 0x6000');
-
+        this.momery[address] = value;
       }
 
       // 0x6000 - 0x7FFF: Battery Backed Save or Work RAM
       if(address >= 0x6000 && address < 0x8000){
         debug('writeMemory address >= 0x6000 && address < 0x8000');
-
+        this.momery[address] = value;
       }
 
       // 0x8000 - 0xFFFF: ROM
       if(address >= 0x8000 && address < 0x10000) {
         debug('writeMemory address >= 0x8000 && address < 0x10000');
+        var mappedAddr = this.mapper.map(address, this.rom.header);
+        this.rom.prg[mappedAddr] = value;
       }
   }
 
