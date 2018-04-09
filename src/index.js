@@ -36,7 +36,6 @@ function NES() {
 
   this.run = function() {
     var currentArr = this.getPC();
-    this.increasePC();
     var opcObj = this.opcodes[this.readMemory(currentArr)];
     this.processInstruction(opcObj);
   }
@@ -294,8 +293,7 @@ function NES() {
       case 'JSR':
         debug('JSR');
         var toStoreAddr = this.pc - 1;
-        //TODO push to stack
-
+        this.pushToStackBy2Bytes(toStoreAddr);
         var memAddr = this.processAddressingMode(opcObj.addressing);
         this.pc.store(memAddr);
         break;
@@ -352,24 +350,27 @@ function NES() {
       case 'PHA':
         debug('PHA');
         var regVal = this.a;
-        //TODO push a to stack
+        this.pushToStack(regVal);
         break;
       case 'PHP':
         debug('PHP');
         this.setStatusRegister('A',1);
         this.setStatusRegister('B',1);
         var regVal = this.p;
-        //TODO push a to stack
+        this.pushToStack(regVal);
         break;
 
       case 'PLA':
         debug('PLA');
-        //TODO pop from stack
-
+        var result = this.pullFromStack();
+        this.a = result;
+        this.flagN(result);
+        this.flagZ(result);
         break;
       case 'PLP':
         debug('PLP');
-        //TODO pop from stack
+        var result = this.pullFromStack();
+        this.setStatusRegister(result);
         break;
 
       case 'ROL':
@@ -506,9 +507,7 @@ function NES() {
       case 'IMMEDIATE':
         // Bytes 2
         debug('IMMEDIATE bytes');
-        var currentArr = this.getPC();
-        this.increasePC();
-        return currentArr;
+        return this.getPC();
         break;
 
       case 'ACCUMULATOR':
@@ -517,7 +516,7 @@ function NES() {
 
       case 'ZERO_PAGE':
         // Bytes 2
-        debug('ZERO_PAGE bytes', this.rom.prg[++this.offset]);
+        return this.getPC() & 0xff;
       break;
 
       case 'ABSOLUTE':
@@ -526,46 +525,44 @@ function NES() {
         break;
       case 'INDEXED_ABSOLUTE_X':
         // Bytes 3
-        debug('INDEXED_ABSOLUTE_X bytes', this.rom.prg[++this.offset]);
-        debug('INDEXED_ABSOLUTE_X bytes', this.rom.prg[++this.offset]);
+        return this.getPCby2Bytes() + this.x;
         break;
       case 'INDEXED_ABSOLUTE_Y':
         // Bytes 3
-        debug('INDEXED_ABSOLUTE_Y bytes', this.rom.prg[++this.offset]);
-        debug('INDEXED_ABSOLUTE_Y bytes', this.rom.prg[++this.offset]);
+        return this.getPCby2Bytes() + this.y;
         break;
 
       case 'RELATIVE':
         // Bytes 2
         debug('RELATIVE bytes');
-        var currentArr = this.getPC();
-        this.increasePC();
-        return currentArr;
+        return this.getPC();
         break;
 
       case 'INDIRECT':
         // Bytes 3
-        debug('INDIRECT bytes', this.rom.prg[++this.offset]);
-        debug('INDIRECT bytes', this.rom.prg[++this.offset]);
+        var addr = this.getPCby2Bytes();
+        var formatedAddr = (addr & 0xff00) | ((addr + 1) & 0xff);
+        return this.readMemory(addr) | (this.readMemory(formatedAddr) << 8);
         break;
 
       case 'INDEXED_INDIRECT_X':
         // Bytes 2
-        debug('INDEXED_INDIRECT_X bytes', this.rom.prg[++this.offset]);
-
+        var addr = (this.getPC() + this.x) & 0xff;
+        return this.memory[addr & 0xff] | ((this.memory[addr + 1] & 0xff) << 8);
         break;
       case 'INDEXED_INDIRECT_Y':
         // Bytes 2
-        debug('INDEXED_INDIRECT_Y bytes', this.rom.prg[++this.offset]);
+        var addr = (this.getPC() + this.y) & 0xff;
+        return this.memory[addr & 0xff] | ((this.memory[addr + 1] & 0xff) << 8);
         break;
 
       case 'INDEXED_ZERO_PAGE_X':
         // Bytes 2
-        debug('INDEXED_ZERO_PAGE_X bytes', this.rom.prg[++this.offset]);
+        return (this.getPC() + this.x) & 0xff;
         break;
       case 'INDEXED_ZERO_PAGE_Y':
         // Bytes 2
-        debug('INDEXED_ZERO_PAGE_Y bytes', this.rom.prg[++this.offset]);
+        return (this.getPC() + this.y) & 0xff;
         break;
 
       default: break;
@@ -641,14 +638,14 @@ function NES() {
   }
 
   this.getPC = function() {
-    return this.pc;
+    var addr = this.pc;
+    this.pc++;
+    return addr;
   }
 
   this.getPCby2Bytes = function(address) {
     var byte1 = this.readMemory(this.getPC());
-    this.increasePC();
     var byte2 = this.readMemory(this.getPC());
-    this.increasePC();
 
     return byte1 | (byte2 << 8);
   }
