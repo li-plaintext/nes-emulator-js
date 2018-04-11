@@ -5,10 +5,11 @@
     <script type="text/javascript" src="src/index.js" ></script>
     <script type="text/javascript" src="src/Constants.js" ></script>
     <script type="text/javascript" src="src/Mappers.js" ></script>
+    <script type="text/javascript" src="src/PPU.js" ></script>
     <title></title>
   </head>
   <body>
-
+    <canvas id="mycanvas" ></canvas>
   </body>
   <script type="text/javascript">
     var nes = new NES();
@@ -21,9 +22,23 @@
       response.arrayBuffer().then(function(buffer) {
         nes.init(buffer);
 
-        for(var i=0; i<20; i++)
+        for(var i=0; i<8; i++)
           nes.run();
       });
     });
+  </script>
+
+  <script type="text/javascript">
+    var ctx = document.querySelector('#mycanvas').getContext('2d');
+
+    var imageData = ctx.getImageData(0, 0, 10, 10);
+
+    var data = new Uint32Array(imageData.data.buffer);
+
+    for(var y = 0 ; y< 10; y++)
+      for(var x = 0 ; x< 10 ; x++)
+        data[y * 10 + x] = 0xff5e4ab5;
+
+    ctx.putImageData(imageData,0,0);
   </script>
 </html>

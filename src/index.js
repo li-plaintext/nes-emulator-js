@@ -4,7 +4,6 @@ function NES() {
   this.length16K = 16384;
   this.length8K = 8192;
   this.length1K = 1024;
-  this.offset = 0;
   this.opcodes = (new Constants()).opcodes;
   this.interupts = (new Constants()).interupts;
   this.mapper = new Mappers();
@@ -27,6 +26,8 @@ function NES() {
   this.p = new Array(8); //Status Register
   this.momery = new Uint8Array(this.length1K * 64); //momery
   this.rom = {}; // cartridge
+
+  this.ppu = new PPU();
 
 
   this.init = function(buffer) {
@@ -60,7 +61,9 @@ function NES() {
     this.rom.prg = new Uint8Array(buffer.slice(16, 16 + (this.length16K * this.rom.header.prg_num))) ;
   }
 
-  this.processInstruction = function(opcObj) {
+  this.processInstruction = function(opcObj = {}) {
+    console.log(this.dumpP());
+
     switch(opcObj.instruction){
       case 'ADC':
         debug('ADC');
@@ -143,6 +146,7 @@ function NES() {
         break;
       case 'BPL':
         debug('BPL');
+
         if(this.getStatusRegister('N') === 0) {
           var memValue = this.readMemory(this.processAddressingMode(opcObj.addressing));
           if(memValue & 0x80) memValue |= 0xff00;
@@ -638,8 +642,7 @@ function NES() {
   }
 
   this.getPC = function() {
-    var addr = this.pc;
-    this.pc++;
+    var addr = this.pc++;
     return addr;
   }
 
@@ -696,7 +699,7 @@ function NES() {
 
       if(address >= 0 && address < 0x2000){
         debug('readMemory address >= 0 && address < 0x2000');
-        return this.momery[address];
+        return this.momery[address & 0x07FF];
       }
 
       // 0x2000 - 0x2007: PPU registers
@@ -704,7 +707,7 @@ function NES() {
 
       if(address >= 0x2000 && address < 0x4000){
         debug('readMemory address >= 0x2000 && address < 0x4000');
-        return this.momery[address];
+        return this.momery[address & 0x2007];
       }
 
       // 0x4000 - 0x4017: APU, PPU and I/O registers
@@ -762,7 +765,7 @@ function NES() {
 
       if(address >= 0 && address < 0x2000){
         debug('writeMemory address >= 0 && address < 0x2000');
-        this.momery[address] = value;
+        this.momery[address & 0x07FF] = value;
       }
 
       // 0x2000 - 0x2007: PPU registers
@@ -770,7 +773,7 @@ function NES() {
 
       if(address >= 0x2000 && address < 0x4000){
         debug('writeMemory address >= 0x2000 && address < 0x4000');
-        this.momery[address] = value;
+        this.momery[address & 0x2007] = value;
       }
 
       // 0x4000 - 0x4017: APU, PPU and I/O registers
