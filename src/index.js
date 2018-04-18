@@ -38,6 +38,7 @@ function NES() {
   this.run = function() {
     var currentArr = this.getPC();
     var opcObj = this.opcodes[this.readMemory(currentArr)];
+    console.log(this.readMemory(currentArr));
     this.processInstruction(opcObj);
   }
 
@@ -62,7 +63,7 @@ function NES() {
   }
 
   this.processInstruction = function(opcObj = {}) {
-
+    console.log(opcObj);
     switch(opcObj.instruction){
       case 'ADC':
         debug('ADC');
@@ -104,22 +105,22 @@ function NES() {
 
       case 'BCC':
         debug('BCC');
+        var memValue = this.readMemory(this.processAddressingMode(opcObj.addressing));
         if(this.getStatusRegister('C') === 0) {
-          var memValue = this.readMemory(this.processAddressingMode(opcObj.addressing));
           this.pc += memValue;
         }
         break;
       case 'BCS':
         debug('BCS');
+        var memValue = this.readMemory(this.processAddressingMode(opcObj.addressing));
         if(this.getStatusRegister('C') === 1) {
-          var memValue = this.readMemory(this.processAddressingMode(opcObj.addressing));
           this.pc += memValue;
         }
         break;
       case 'BEQ':
         debug('BEQ');
+        var memValue = this.readMemory(this.processAddressingMode(opcObj.addressing));
         if(this.getStatusRegister('Z') === 1) {
-          var memValue = this.readMemory(this.processAddressingMode(opcObj.addressing));
           this.pc += memValue;
         }
         break;
@@ -134,15 +135,15 @@ function NES() {
         break;
       case 'BMI':
         debug('BMI');
+        var memValue = this.readMemory(this.processAddressingMode(opcObj.addressing));
         if(this.getStatusRegister('N') === 1) {
-          var memValue = this.readMemory(this.processAddressingMode(opcObj.addressing));
           this.pc += memValue;
         }
         break;
       case 'BNE':
         debug('BNE');
+        var memValue = this.readMemory(this.processAddressingMode(opcObj.addressing));
         if(this.getStatusRegister('Z') === 0) {
-          var memValue = this.readMemory(this.processAddressingMode(opcObj.addressing));
           if (memValue & 0x80) {
             this.writePC(this.pc + (memValue | 0xff00));
           }
@@ -151,8 +152,8 @@ function NES() {
         break;
       case 'BPL':
         debug('BPL');
+        var memValue = this.readMemory(this.processAddressingMode(opcObj.addressing));
         if(this.getStatusRegister('N') === 0) {
-          var memValue = this.readMemory(this.processAddressingMode(opcObj.addressing));
           if (memValue & 0x80) {
             this.writePC(this.pc + (memValue | 0xff00));
           }
@@ -165,15 +166,15 @@ function NES() {
         break;
       case 'BVC':
         debug('BVC');
+        var memValue = this.readMemory(this.processAddressingMode(opcObj.addressing));
         if(this.getStatusRegister('V') === 0) {
-          var memValue = this.readMemory(this.processAddressingMode(opcObj.addressing));
           this.pc += memValue;
         }
         break;
       case 'BVS':
         debug('BVS');
+        var memValue = this.readMemory(this.processAddressingMode(opcObj.addressing));
         if(this.getStatusRegister('V') === 1) {
-          var memValue = this.readMemory(this.processAddressingMode(opcObj.addressing));
           this.pc += memValue;
         }
         break;
@@ -762,7 +763,6 @@ function NES() {
 
       if(address >= 0x2000 && address < 0x4000){
         debug('readMemory address >= 0x2000 && address < 0x4000');
-        console.log("this.ppu", this.ppu);
         return this.ppu.readRegisters(address);
       }
 
