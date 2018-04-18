@@ -22,8 +22,10 @@
       response.arrayBuffer().then(function(buffer) {
         nes.init(buffer);
 
-        for(var i=0; i<100; i++)
+        for(var i=0; i<15; i++)
           nes.run();
+
+        console.log(nes.dumpCPU());
       });
     });
   </script>
