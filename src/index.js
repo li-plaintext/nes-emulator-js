@@ -140,7 +140,7 @@ function NES() {
         debug('BNE');
         if(this.getStatusRegister('Z') === 0) {
           var memValue = this.readMemory(this.processAddressingMode(opcObj.addressing));
-          if (memValue < 0x80) {
+          if (memValue & 0x80) {
             this.pc += (memValue | 0xff00);
             this.pc &= 0xffff;
           }
@@ -151,7 +151,7 @@ function NES() {
         debug('BPL');
         if(this.getStatusRegister('N') === 0) {
           var memValue = this.readMemory(this.processAddressingMode(opcObj.addressing));
-          if (memValue < 0x80) {
+          if (memValue & 0x80) {
             this.pc += (memValue | 0xff00);
             this.pc &= 0xffff;
           }
@@ -303,7 +303,7 @@ function NES() {
         var toStoreAddr = this.pc - 1;
         this.pushToStackBy2Bytes(toStoreAddr);
         var memAddr = this.processAddressingMode(opcObj.addressing);
-        this.pc.store(memAddr);
+        this.pc = memAddr;
         break;
       case 'LDA':
         debug('LDA');
