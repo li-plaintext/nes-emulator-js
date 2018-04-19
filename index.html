@@ -22,7 +22,8 @@
       response.arrayBuffer().then(function(buffer) {
         nes.init(buffer);
 
-        for(var i=0; i<2000; i++)
+        var counter = Math.floor(341 * 262 / 3) * 6 + 27401;
+        for(var i=0; i<counter; i++)
           nes.run();
 
         console.log(nes.dumpCPU());
