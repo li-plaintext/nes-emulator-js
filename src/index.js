@@ -29,10 +29,10 @@ function NES() {
 
   this.ppu = new PPU();
 
-  this.init = function(buffer) {
+  this.init = function(buffer, ctx) {
     this.analyzerRom(buffer);
     this.powerOn();
-    this.ppu.init(this.rom, this);
+    this.ppu.init(this.rom, this, ctx);
   }
 
   this.run = function() {
@@ -54,6 +54,7 @@ function NES() {
       'prg_ram_num': header[8],
       'flag_9': header[9],
       'trainer': trainer,
+      'mirroring': header[6] & 1 ==0 ? 'HORIZONTAL' : 'VERTICAL',
     }
 
     this.rom.rowData = buffer;
@@ -131,9 +132,6 @@ function NES() {
         this.flagN(memValue);
         this.flagZ(result);
         this.flagV(memValue);
-
-        if(this.pc ===  64696)
-          console.log(memValue);
 
         break;
       case 'BMI':
@@ -899,6 +897,15 @@ function NES() {
     console.log('this.s ->', this.s);
     console.log('this.status(p) ->', parseInt(([].concat(this.p)).reverse().join(''), 2));
     console.log('this.ppu ->', this.ppu);
+    console.log('this.OAMADDR ->', this.ppu.OAMADDR.value);
+    console.log('this.OAMDMA ->', this.ppu.OAMDMA.value);
+    console.log('this.OAMDATA ->', this.ppu.OAMDATA.value);
+    console.log('this.PPUADDR ->', this.ppu.PPUADDR.value);
+    console.log('this.PPUCTRL ->', this.ppu.PPUCTRL.value);
+    console.log('this.PPUMASK ->', this.ppu.PPUMASK.value);
+    console.log('this.PPUSCROLL ->', this.ppu.PPUSCROLL.value);
+    console.log('this.PPUSTATUS ->', this.ppu.PPUSTATUS.value);
+
   }
 
 }
