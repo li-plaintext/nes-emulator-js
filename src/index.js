@@ -28,6 +28,7 @@ function NES() {
   this.rom = {}; // cartridge
 
   this.ppu = new PPU();
+  this.opcObj = {}
 
   this.init = function(buffer, ctx) {
     this.analyzerRom(buffer);
@@ -37,8 +38,8 @@ function NES() {
 
   this.run = function() {
     var currentArr = this.getPC();
-    var opcObj = this.opcodes[this.readMemory(currentArr)];
-    this.processInstruction(opcObj);
+    this.opcObj = this.opcodes[this.readMemory(currentArr)];
+    this.processInstruction(this.opcObj);
   }
 
   this.analyzerRom = function(buffer) {
@@ -77,7 +78,7 @@ function NES() {
         if(!((regVal ^ memValue) & 0x80) && ((memValue ^ result) & 0x80))
           this.setStatusRegisterFlag('V', 1);
         else
-          this.setStatusRegisterFlag('V', 1);
+          this.setStatusRegisterFlag('V', 0);
         break;
       case 'AND':
         debug('AND');
@@ -106,21 +107,30 @@ function NES() {
         debug('BCC');
         var memValue = this.readMemory(this.processAddressingMode(opcObj.addressing));
         if(this.getStatusRegister('C') === 0) {
-          this.pc += memValue;
+          if (memValue & 0x80) {
+            memValue |= 0xff00;
+          }
+          this.writePC(this.pc + memValue);
         }
         break;
       case 'BCS':
         debug('BCS');
         var memValue = this.readMemory(this.processAddressingMode(opcObj.addressing));
         if(this.getStatusRegister('C') === 1) {
-          this.pc += memValue;
+          if (memValue & 0x80) {
+            memValue |= 0xff00;
+          }
+          this.writePC(this.pc + memValue);
         }
         break;
       case 'BEQ':
         debug('BEQ');
         var memValue = this.readMemory(this.processAddressingMode(opcObj.addressing));
         if(this.getStatusRegister('Z') === 1) {
-          this.pc += memValue;
+          if (memValue & 0x80) {
+            memValue |= 0xff00;
+          }
+          this.writePC(this.pc + memValue);
         }
         break;
       case 'BIT':
@@ -138,7 +148,10 @@ function NES() {
         debug('BMI');
         var memValue = this.readMemory(this.processAddressingMode(opcObj.addressing));
         if(this.getStatusRegister('N') === 1) {
-          this.pc += memValue;
+          if (memValue & 0x80) {
+            memValue |= 0xff00;
+          }
+          this.writePC(this.pc + memValue);
         }
         break;
       case 'BNE':
@@ -146,9 +159,9 @@ function NES() {
         var memValue = this.readMemory(this.processAddressingMode(opcObj.addressing));
         if(this.getStatusRegister('Z') === 0) {
           if (memValue & 0x80) {
-            this.writePC(this.pc + (memValue | 0xff00));
+            memValue |= 0xff00;
           }
-
+          this.writePC(this.pc + memValue);
         }
         break;
       case 'BPL':
@@ -156,8 +169,9 @@ function NES() {
         var memValue = this.readMemory(this.processAddressingMode(opcObj.addressing));
         if(this.getStatusRegister('N') === 0) {
           if (memValue & 0x80) {
-            this.writePC(this.pc + (memValue | 0xff00));
+            memValue |= 0xff00;
           }
+          this.writePC(this.pc + memValue);
         }
         break;
       case 'BRK':
@@ -169,14 +183,20 @@ function NES() {
         debug('BVC');
         var memValue = this.readMemory(this.processAddressingMode(opcObj.addressing));
         if(this.getStatusRegister('V') === 0) {
-          this.pc += memValue;
+          if (memValue & 0x80) {
+            memValue |= 0xff00;
+          }
+          this.writePC(this.pc + memValue);
         }
         break;
       case 'BVS':
         debug('BVS');
         var memValue = this.readMemory(this.processAddressingMode(opcObj.addressing));
         if(this.getStatusRegister('V') === 1) {
-          this.pc += memValue;
+          if (memValue & 0x80) {
+            memValue |= 0xff00;
+          }
+          this.writePC(this.pc + memValue);
         }
         break;
       case 'CLC':
@@ -298,7 +318,7 @@ function NES() {
 
       case 'JMP':
         debug('JMP');
-        var memValue = this.readMemory(this.processAddressingMode(opcObj.addressing));
+        var memAddr = this.processAddressingMode(opcObj.addressing);
         this.writePC(memAddr);
         break;
       case 'JSR':
@@ -550,11 +570,6 @@ function NES() {
         // Bytes 1
         break;
 
-      case 'ZERO_PAGE':
-        // Bytes 2
-        return this.getPC() & 0xff;
-      break;
-
       case 'ABSOLUTE':
         // Bytes 3
         return this.getPCby2Bytes();
@@ -583,22 +598,27 @@ function NES() {
 
       case 'INDEXED_INDIRECT_X':
         // Bytes 2
-        var addr = (this.getPC() + this.x) & 0xff;
+        var addr = (this.readMemory(this.getPC()) + this.x) & 0xff;
         return this.memory[addr & 0xff] | ((this.memory[addr + 1] & 0xff) << 8);
         break;
       case 'INDEXED_INDIRECT_Y':
         // Bytes 2
-        var addr = (this.getPC() + this.y) & 0xff;
-        return this.memory[addr & 0xff] | ((this.memory[addr + 1] & 0xff) << 8);
+        var addr_pc = this.readMemory(this.getPC());
+        var addr_Zero_page = this.memory[addr_pc & 0xff] | ((this.memory[addr_pc + 1] & 0xff) << 8);
+        return (addr_Zero_page + this.y) & 0xffff;
         break;
 
+      case 'ZERO_PAGE':
+        // Bytes 2
+        return this.readMemory(this.getPC()) & 0xff;
+      break;
       case 'INDEXED_ZERO_PAGE_X':
         // Bytes 2
-        return (this.getPC() + this.x) & 0xff;
+        return (this.readMemory(this.getPC()) + this.x) & 0xff;
         break;
       case 'INDEXED_ZERO_PAGE_Y':
         // Bytes 2
-        return (this.getPC() + this.y) & 0xff;
+        return (this.readMemory(this.getPC()) + this.y) & 0xff;
         break;
 
       default: break;
@@ -890,6 +910,7 @@ function NES() {
   }
 
   this.dumpCPU = function(){
+    console.log(this.opcObj);
     console.log('this.a ->', this.a);
     console.log('this.x ->', this.x);
     console.log('this.y ->', this.y);

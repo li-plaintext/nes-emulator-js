@@ -110,7 +110,8 @@ function PPU() {
         break;
       default: break;
     }
-    this.PPUCTRL.value = parseInt(this.PPUCTRL.arr.reverse().join(''), 2);
+    var tmpArr = [].slice.call(this.PPUCTRL.arr);
+    this.PPUCTRL.value = parseInt(tmpArr.reverse().join(''), 2);
   }
   this.getPPUCTRL = function(indicator) {
     // V P H B S I N N
@@ -162,7 +163,8 @@ function PPU() {
         break;
       default: break;
     }
-    this.PPUMASK.value = parseInt(this.PPUMASK.arr.reverse().join(''), 2);
+    var tmpArr = [].slice.call(this.PPUMASK.arr);
+    this.PPUMASK.value = parseInt(tmpArr.reverse().join(''), 2);
 
   }
   this.getPPUMASK = function(indicator) {
@@ -203,8 +205,8 @@ function PPU() {
       case 'O': this.PPUSTATUS.arr[5] = value; break;
       default: break;
     }
-
-    this.PPUSTATUS.value = parseInt(this.PPUSTATUS.arr.reverse().join(''), 2);
+    var tmpArr = [].slice.call(this.PPUSTATUS.arr);
+    this.PPUSTATUS.value = parseInt(tmpArr.reverse().join(''), 2);
   }
   this.getPPUSTATUS = function(indicator) {
     // V S O
