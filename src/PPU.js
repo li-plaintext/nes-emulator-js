@@ -21,11 +21,11 @@ function PPU() {
 
   this.palette = (new Constants()).palette;
 
-  this.nameTableRegister = { value: 0, arr: new Array(8) };
-  this.attributeTableLowRegister = { value: 0, arr: new Array(16) };
-  this.attributeTableHighRegister = { value: 0, arr: new Array(16) };
-  this.patternTableLowRegister = { value: 0, arr: new Array(16) };
-  this.patternTableHighRegister = { value: 0, arr: new Array(16) };
+  this.nameTableRegister = { value: 0, arr: new Uint8Array(8) };
+  this.attributeTableLowRegister = { value: 0, arr: new Uint8Array(16) };
+  this.attributeTableHighRegister = { value: 0, arr: new Uint8Array(16) };
+  this.patternTableLowRegister = { value: 0, arr: new Uint8Array(16) };
+  this.patternTableHighRegister = { value: 0, arr: new Uint8Array(16) };
 
   this.nameTableLatch = 0;
   this.attributeTableLowLatch = 0;
@@ -51,6 +51,31 @@ function PPU() {
 
   this.dup = {};
 
+
+  this.initSprites = function(memory, length) {
+    let res = [];
+    for(var i = 0, len = length / 4; i < len; i++) {
+      res.push(new Sprite(i, i, memory));
+    }
+    return res;
+  }
+
+  this.initArray = function(len, initalValue) {
+    let res = [];
+    for(var i = 0; i < len; i++) {
+      res[i] = initalValue;
+    }
+    return res;
+  }
+
+
+  this.sprites = this.initSprites(this.oamRam, this.oamRam.length);
+  this.sprites2 = this.initSprites(this.oamRam2, this.oamRam2.length);
+
+  this.spritePixels = this.initArray(256, -1);
+  this.spriteIds = this.initArray(256, -1);
+  this.spritePriorities = this.initArray(256, -1);
+
   this.init = function(rom, cpu, cxt){
     this.setRom(rom);
     this.setCPU(cpu);
@@ -72,6 +97,8 @@ function PPU() {
     // console.log('ppu run');
     this.render();
     this.updateShiftRegisters();
+    this.fetch();
+    this.evaluateSprites();
     this.updateFlags();
     this.updateScrollCounters();
     this.updateCycle();
@@ -353,7 +380,7 @@ function PPU() {
       this.incrementMemoryAddress();
     }
     if(address === 0x4014) {
-      return this.writeOAMDMA(value);
+      this.writeOAMDMA(value);
       var offset = value * 0x100;
 
       for(var i = this.readOAMADDR(); i < 256; i++)
@@ -514,6 +541,11 @@ function PPU() {
   this.loadBit = function(register, index) {
     return (register.value >> index) & 1;
   }
+  this.loadLowerByte = function(register, value) {
+    let lowerByte = (value << 8) & 0xff00;
+    let highByte = register.value & 0xff;
+    return highByte | lowerByte;
+  }
 
   this.shift = function(register, value) {
     value = value & 1;  // just in case
@@ -551,9 +583,13 @@ function PPU() {
     var x = this.cycle - 1 ;
     var y = this.scanLine;
 
-    var backgroundPixel = this.getBackgroundPixel();
+    // var backgroundPixel = this.getBackgroundPixel();
+    //
+    // this.setCanvasdata(x, y, backgroundPixel);
 
-    this.setCanvasdata(x, y, backgroundPixel);
+    var spritePixel = this.spritePixels[x];
+
+    this.setCanvasdata(x, y, spritePixel);
   }
   this.updateShiftRegisters = function() {
     if(this.scanLine >= 240 && this.scanLine <= 260)
@@ -577,6 +613,13 @@ function PPU() {
         this.setPPUSTATUS('V', 0);
         this.setPPUSTATUS('S', 0);
         this.setPPUSTATUS('O', 0);
+      }
+    }
+
+    if(this.cycle === 10) {
+      if(this.scanLine === 241) {
+        if(this.getPPUCTRL('V') === 1)
+          this.cpu.interrupt('NMI');
       }
     }
 
@@ -653,5 +696,289 @@ function PPU() {
       }
     }
   }
+
+
+
+  this.fetch = function() {
+    if(this.scanLine >= 240 && this.scanLine <= 260)
+      return;
+
+    if(this.cycle === 0)
+      return;
+
+    if((this.cycle >= 257 && this.cycle <= 320) || this.cycle >= 337)
+      return;
+
+    switch((this.cycle - 1) % 8) {
+      case 0:
+        this.fetchNameTable();
+        break;
+
+      case 2:
+        this.fetchAttributeTable();
+        break;
+
+      case 4:
+        this.fetchPatternTableLow();
+        break;
+
+      case 6:
+        this.fetchPatternTableHigh();
+        break;
+
+      default:
+        break;
+    }
+
+    if(this.cycle % 8 === 1) {
+      this.nameTableRegister.value = this.nameTableLatch;
+      this.loadLowerByte(this.attributeTableLowRegister, this.attributeTableLowLatch);
+      this.loadLowerByte(this.attributeTableHighRegister, this.attributeTableHighLatch);
+      this.loadLowerByte(this.patternTableLowRegister, this.patternTableLowLatch);
+      this.loadLowerByte(this.patternTableHighRegister, this.patternTableHighLatch);
+    }
+  }
+
+  this.fetchNameTable = function() {
+    this.nameTableLatch = this.readMemory(0x2000 | (this.currentVRamAddress & 0x0FFF));
+  },
+
+  this.fetchAttributeTable = function() {
+    var v = this.currentVRamAddress;
+    var address = 0x23C0 | (v & 0x0C00) | ((v >> 4) & 0x38) | ((v >> 2) & 0x07);
+
+    var byte = this.readMemory(address);
+
+    var coarseX = v & 0x1F;
+    var coarseY = (v >> 5) & 0x1F
+
+    var topbottom = (coarseY % 4) >= 2 ? 1 : 0; // bottom, top
+    var rightleft = (coarseX % 4) >= 2 ? 1 : 0; // right, left
+
+    var position = (topbottom << 1) | rightleft; // bottomright, bottomleft,
+                                                 // topright, topleft
+
+    var value = (byte >> (position << 1)) & 0x3;
+    var highBit = value >> 1;
+    var lowBit = value & 1;
+
+    this.attributeTableHighLatch = highBit === 1 ? 0xff : 0;
+    this.attributeTableLowLatch = lowBit === 1 ? 0xff : 0;
+  },
+
+  this.fetchPatternTableLow = function() {
+    var fineY = (this.currentVRamAddress >> 12) & 0x7;
+    var index = this.getPPUCTRL('B') * 0x1000 +
+                  this.nameTableRegister.value * 0x10 + fineY;
+
+    this.patternTableLowLatch = this.readMemory(index);
+  },
+
+  this.fetchPatternTableHigh = function() {
+    var fineY = (this.currentVRamAddress >> 12) & 0x7;
+    var index = this.getPPUCTRL('B') * 0x1000 +
+                  this.nameTableRegister.value * 0x10 + fineY;
+
+    this.patternTableHighLatch = this.readMemory(index + 0x8);
+  },
+
+  this.evaluateSprites = function() {
+    if(this.scanLine >= 240)
+      return;
+
+    if(this.cycle === 0) {
+      this.processSpritePixels();
+
+      for(var i = 0; i < 32; i++)
+        this.oamRam2[i] = 0xFF;
+
+    } else if(this.cycle === 65) {
+      var height = this.getPPUCTRL('H') ? 16 : 8;
+      var n = 0;
+
+      for(var i = 0, len = this.sprites.length; i < len; i++) {
+        var sprite = this.sprites[i];
+
+        if(sprite.on(this.scanLine, height) === true) {
+          if(n < 8) {
+            this.sprites2[n++].copy(sprite);
+          } else {
+            this.setPPUSTATUS('O', 1);
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  this.processSpritePixels = function() {
+    var ay = this.scanLine - 1;
+
+    for(var i = 0, il = this.spritePixels.length; i < il; i++) {
+      this.spritePixels[i] = -1;
+      this.spriteIds[i] = -1;
+      this.spritePriorities[i] = -1;
+    }
+
+    var height = this.getPPUCTRL('H') === 1 ? 16 : 8;
+    var n = 0;
+
+    for(var i = 0, len = this.sprites2.length; i < len; i++) {
+      var s = this.sprites2[i];
+
+      if(s.isEmpty())
+        break;
+
+      var bx = s.getXPosition();
+      var by = s.getYPosition();
+      var j = ay - by;
+      var cy = s.doFlipVertically() ? height - j - 1 : j;
+      var horizontal = s.doFlipHorizontally();
+      var ptIndex = (height === 8) ? s.getTileIndex() : s.getTileIndexForSize16();
+      var msb = s.getPalletNum();
+
+      for(var k = 0; k < 8; k++) {
+        var cx = horizontal ? 7 - k : k;
+        var x = bx + k;
+
+        if(x >= 256)
+          break;
+
+        var lsb = this.getPatternTableElement(ptIndex, cx, cy, height);
+
+        if(lsb !== 0) {
+          var pIndex = (msb << 2) | lsb;
+
+          if(this.spritePixels[x] === -1) {
+            this.dup[this.readMemory(0x3F10 + pIndex)] = this.readMemory(0x3F10 + pIndex);
+
+            this.spritePixels[x] = this.palette[this.readMemory(0x3F10 + pIndex)];
+            this.spriteIds[x] = s.getId();
+            this.spritePriorities[x] = s.getPriority();
+          }
+        }
+      }
+    }
+  }
+
+  this.getPatternTableElement = function(index, x, y, ySize) {
+    var ax = x % 8;
+    var a, b;
+
+    if(ySize === 8) {
+      var ay = y % 8;
+      var offset = this.getPPUCTRL('B') === 1 ? 0x1000 : 0;
+      a = this.readMemory(offset + index * 0x10 + ay);
+      b = this.readMemory(offset + index * 0x10 + 0x8 + ay);
+    } else {
+      var ay = y % 8;
+      ay += (y >> 3) * 0x10;
+      a = this.readMemory(index + ay);
+      b = this.readMemory(index + ay + 0x8);
+    }
+
+    return ((a >> (7 - ax)) & 1) | (((b >> (7 - ax)) & 1) << 1);
+  }
+
+}
+
+
+function Sprite(index, id, memory){
+  this.index = index;
+  this.id = id;
+  this.memory = memory;
+  this.isSprite = true;
+  this.getId = function() {
+    return this.id;
+  };
+
+  this.setId = function(id) {
+    this.id = id;
+  };
+
+  this.getByte0 = function() {
+    return this.memory[this.index * 4 + 0];
+  };
+
+  this.getByte1 = function() {
+    return this.memory[this.index * 4 + 1];
+  };
+
+  this.getByte2 = function() {
+    return this.memory[this.index * 4 + 2];
+  };
+
+  this.getByte3 = function() {
+    return this.memory[this.index * 4 + 3];
+  };
+
+  this.setByte0 = function(value) {
+    this.memory[this.index * 4 + 0] = value;
+  };
+
+  this.setByte1 = function(value) {
+    this.memory[this.index * 4 + 1] = value;
+  };
+
+  this.setByte2 = function(value) {
+    this.memory[this.index * 4 + 2] = value;
+  };
+
+  this.setByte3 = function(value) {
+    this.memory[this.index * 4 + 3] = value;
+  };
+
+  this.copy = function(sprite) {
+    this.setId(sprite.getId());
+    this.setByte0(sprite.getByte0());
+    this.setByte1(sprite.getByte1());
+    this.setByte2(sprite.getByte2());
+    this.setByte3(sprite.getByte3());
+  };
+
+  this.isEmpty = function() {
+    return this.getByte0() === 0xFF && this.getByte1() === 0xFF &&
+             this.getByte2() === 0xFF && this.getByte3() === 0xFF;
+  };
+
+  this.isVisible = function() {
+    return this.getByte0() < 0xEF;
+  };
+
+  this.getYPosition = function() {
+    return this.getByte0() - 1;
+  };
+
+  this.getXPosition = function() {
+    return this.getByte3();
+  };
+
+  this.getTileIndex = function() {
+    return this.getByte1();
+  };
+
+  this.getTileIndexForSize16 = function() {
+    return ((this.getByte1() & 1) * 0x1000) + (this.getByte1() >> 1) * 0x20;
+  };
+
+  this.getPalletNum = function() {
+    return this.getByte2() & 0x3;
+  };
+
+  this.getPriority = function() {
+    return (this.getByte2() >> 5) & 1;
+  };
+
+  this.doFlipHorizontally = function() {
+    return ((this.getByte2() >> 6) & 1) ? true : false;
+  };
+
+  this.doFlipVertically = function() {
+    return ((this.getByte2() >> 7) & 1) ? true : false;
+  };
+
+  this.on = function(y, length) {
+    return (y >= this.getYPosition()) && (y < this.getYPosition() + length);
+  };
 
 }

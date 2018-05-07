@@ -217,6 +217,9 @@ function NES() {
         break;
 
       case 'CMP':
+        if(this.cycles >= 235855 ){
+          console.log('cmp', this.cycles);
+        }
         debug('CMP');
         var regVal = this.a;
         var memValue = this.readMemory(this.processAddressingMode(opcObj.addressing));
@@ -664,6 +667,9 @@ function NES() {
   this.getStatusRegister = function(indicator) {
      return this.p[this.statusMapping[indicator]];
   }
+  this.getStatusRegisterValue = function() {
+     return parseInt(([].concat(this.p)).reverse().join(''), 2);
+  }
 
   this.writeA = function(val){
     this.a = val & 0xff;
@@ -849,7 +855,7 @@ function NES() {
 
       if(address >= 0x2000 && address < 0x4000){
         debug('writeMemory address >= 0x2000 && address < 0x4000', address.toString(16));
-        this.ppu.writeRegisters((address), value);
+        this.ppu.writeRegisters((address & 0x2007), value);
       }
 
       // 0x4000 - 0x4017: APU, PPU and I/O registers
@@ -857,27 +863,27 @@ function NES() {
 
       if(address >= 0x4000 && address < 0x4014){
         // debug('writeMemory address >= 0x4000 && address < 0x4014');
-        this.memory[address] = value;
+        // apu
       }
 
       if(address === 0x4014){
         // debug('writeMemory address === 0x4014');
-        this.memory[address] = value;
+        this.ppu.writeRegisters(address, value);
       }
 
       if(address === 0x4015){
         // debug('writeMemory address === 0x4015');
-        this.memory[address] = value;
+        //apu
       }
 
       if(address === 0x4016){
         // debug('writeMemory address === 0x4016');
-        this.memory[address] = value;
+        // pad1
       }
 
       if(address >= 0x4017 && address < 0x4020){
         // debug('writeMemory address >= 0x4017 && address < 0x4020');
-        this.memory[address] = value;
+        // apu
       }
 
       // cartridge space
@@ -901,12 +907,38 @@ function NES() {
   }
 
   this.reset = function() {
-    var pc = this.readHighAndLowBytes(this.interupts.RESET);
+    var pc = this.readHighAndLowBytes(this.interupts.RESET.value);
     this.writePC(pc);
   }
 
   this.readHighAndLowBytes = function(address){
     return this.readMemory(address) | (this.readMemory(address + 1) << 8);
+  }
+
+
+  this.jumpToInterruptHandler = function(type) {
+    var value = this.readMemory(this.interupts[type].value) | (this.readMemory(this.interupts[type].value + 1) << 8);
+    this.writePC(value);
+  }
+
+  this.interrupt = function(type) {
+    if(type === this.interupts.IRQ.id && this.getStatusRegister('I') === 1)
+      return;
+
+    if(type !== this.interupts.RESET.id) {
+      if(type !== this.interupts.BRK.id)
+        this.setStatusRegisterFlag('B', 0);
+
+
+      this.setStatusRegisterFlag('A', 1);
+
+      this.pushToStackBy2Bytes(this.pc);
+      this.pushToStack(this.getStatusRegisterValue());
+
+      this.setStatusRegisterFlag('I', 1);
+    }
+
+    this.jumpToInterruptHandler(type);
   }
 
   this.dumpCPU = function(){
@@ -926,6 +958,7 @@ function NES() {
     console.log('this.PPUMASK ->', this.ppu.PPUMASK.value);
     console.log('this.PPUSCROLL ->', this.ppu.PPUSCROLL.value);
     console.log('this.PPUSTATUS ->', this.ppu.PPUSTATUS.value);
+    console.log('this.dup ->', this.ppu.dup);
 
   }
 
