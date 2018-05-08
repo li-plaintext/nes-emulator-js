@@ -24,7 +24,8 @@
       response.arrayBuffer().then(function(buffer) {
         nes.init(buffer, cxt);
 
-        var counter = Math.floor(341 * 262 / 3) * 8 - 2375;
+        var counter = Math.floor(341 * 262 / 3) * 9 ;
+        // var counter = 235874;
         for(var i=0; i<counter ; i++) {
           nes.ppu.cycles = i;
           nes.cycles = i;

@@ -217,9 +217,6 @@ function NES() {
         break;
 
       case 'CMP':
-        if(this.cycles >= 235855 ){
-          console.log('cmp', this.cycles);
-        }
         debug('CMP');
         var regVal = this.a;
         var memValue = this.readMemory(this.processAddressingMode(opcObj.addressing));
@@ -366,12 +363,12 @@ function NES() {
           this.writeMemory(memAddr, result);
         }
 
-        this.getStatusRegister('N', 0);
+        this.setStatusRegisterFlag('N', 0);
         this.flagZ(result);
         if((memValue & 1) == 0)
-          this.getStatusRegister('C', 0);
+          this.setStatusRegisterFlag('C', 0);
         else
-          this.getStatusRegister('C', 1);
+          this.setStatusRegisterFlag('C', 1);
         break;
 
       case 'NOP':
@@ -396,7 +393,7 @@ function NES() {
         break;
       case 'PHP':
         debug('PHP');
-        this.setStatusRegisterFlag('A',1);
+        this.setStatusRegisterFlag('-',1);
         this.setStatusRegisterFlag('B',1);
         var regVal = this.p;
         this.pushToStack(regVal);
@@ -436,17 +433,20 @@ function NES() {
         this.flagN(result);
         break;
       case 'ROR':
+        if(this.cycles >= 235855 ){
+          console.log('cmp', this.cycles);
+        }
         debug('ROR');
         var memAddr, memValue, c, result;
         if (opcObj.addressing === 'ACCUMULATOR') {
           memValue = this.a;
-          c = this.getStatusRegister('C');
+          c = this.getStatusRegister('C') ? 0x80 : 0x00;
           result = (memValue >> 1) | c;
           this.writeA(result);
         } else {
           memAddr = this.processAddressingMode(opcObj.addressing);
           memValue = this.readMemory(memAddr);
-          c = this.getStatusRegister('C');
+          c = this.getStatusRegister('C') ? 0x80 : 0x00;
           result = (memValue >> 1) | c;
           this.writeMemory(memAddr, result);
         }
@@ -458,8 +458,15 @@ function NES() {
           this.setStatusRegisterFlag('C', 1);
         break;
 
-      case 'RTI': debug('RTI'); break;
-      case 'RTS': debug('RTS'); break;
+      case 'RTI':
+        debug('RTI');
+          this.setStatusRegister(this.pullFromStack());
+          this.writePC(this.pullFromStackBy2Bytes());
+        break;
+      case 'RTS':
+        debug('RTS');
+        this.writePC(this.pullFromStackBy2Bytes() + 1);
+        break;
 
       case 'SBC':
         debug('SBC');
@@ -757,19 +764,19 @@ function NES() {
     return this.readMemory(stackAddr);
   }
   this.pushToStackBy2Bytes = function(value) {
-    var hightByte = value & 0xff;
+    var highByte = value & 0xff;
     var lowByte = (value >> 8) & 0xff;
     var stackAddr = this.s + 0x100;
     this.writeMemory(stackAddr, lowByte);
     this.decreaseS();
     stackAddr = this.s + 0x100;
-    this.writeMemory(stackAddr, hightByte);
+    this.writeMemory(stackAddr, highByte);
     this.decreaseS();
   }
   this.pullFromStackBy2Bytes = function() {
     this.increaseS();
     var stackAddr = this.s + 0x100;
-    var hightByte = this.readMemory(stackAddr);
+    var highByte = this.readMemory(stackAddr);
     this.increaseS();
     stackAddr = this.s + 0x100;
     var lowByte = this.readMemory(stackAddr);
@@ -846,7 +853,9 @@ function NES() {
       // 0x0800 - 0x1FFF: Mirrors of 0x0000 - 0x07FF (repeats every 0x800 bytes)
 
       if(address >= 0 && address < 0x2000){
-        // debug('writeMemory address >= 0 && address < 0x2000');
+        if(address === 1) {
+           console.log('writeMemory address >= 0 && address < 0x2000');
+        }
         this.memory[address & 0x07FF] = value;
       }
 
@@ -930,7 +939,7 @@ function NES() {
         this.setStatusRegisterFlag('B', 0);
 
 
-      this.setStatusRegisterFlag('A', 1);
+      this.setStatusRegisterFlag('-', 1);
 
       this.pushToStackBy2Bytes(this.pc);
       this.pushToStack(this.getStatusRegisterValue());
