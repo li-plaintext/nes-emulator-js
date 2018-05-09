@@ -532,9 +532,6 @@ function PPU() {
   }
 
   this.renderCanvas = function () {
-
-
-
     this.canvas.ctx.putImageData(this.canvas.imageData,0,0);
   }
 
@@ -565,8 +562,6 @@ function PPU() {
 
     var index = (msb << 2) | lsb;
 
-    // TODO: fix me
-
     if(this.getPPUSTATUS('g') === 1)
       index = index & 0x30;
 
@@ -583,13 +578,50 @@ function PPU() {
     var x = this.cycle - 1 ;
     var y = this.scanLine;
 
-    // var backgroundPixel = this.getBackgroundPixel();
-    //
-    // this.setCanvasdata(x, y, backgroundPixel);
+    var backgroundVisible = this.getPPUMASK('b');
+    var spritesVisible = this.getPPUMASK('s');
 
+    var backgroundPixel = this.getBackgroundPixel();
     var spritePixel = this.spritePixels[x];
+    var spriteId = this.spriteIds[x];
+    var spritePriority = this.spritePriorities[x];
 
-    this.setCanvasdata(x, y, spritePixel);
+    var c = 0;
+
+    // TODO: fix me
+
+    if(backgroundVisible === 1 && spritesVisible === 1) {
+      if(spritePixel === -1) {
+        c = backgroundPixel;
+      } else {
+        if(backgroundPixel === c)
+          c = spritePixel
+        else
+          c = spritePriority === 0 ? spritePixel : backgroundPixel;
+      }
+    } else if(backgroundVisible === 1 && spritesVisible === 0) {
+      c = backgroundPixel;
+    } else if(backgroundVisible === 0 && spritesVisible === 1) {
+      if(spritePixel !== -1)
+        c = spritePixel;
+    }
+
+    // TODO: fix me
+
+    if(this.getPPUMASK('R') === 1)
+      c = c | 0x00FF0000;
+    if(this.getPPUMASK('G') === 1)
+      c = c | 0x0000FF00;
+    if(this.getPPUMASK('B') === 1)
+      c = c | 0x000000FF;
+
+    // TODO: fix me
+
+    if(backgroundVisible === 1 && spritesVisible === 1 &&
+       spriteId === 0 && spritePixel !== 0 && backgroundPixel !== 0)
+      this.getPPUSTATUS('S');
+
+    this.setCanvasdata(x, y, c);
   }
   this.updateShiftRegisters = function() {
     if(this.scanLine >= 240 && this.scanLine <= 260)
