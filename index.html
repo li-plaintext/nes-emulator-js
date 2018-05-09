@@ -6,6 +6,7 @@
     <script type="text/javascript" src="src/Constants.js" ></script>
     <script type="text/javascript" src="src/Mappers.js" ></script>
     <script type="text/javascript" src="src/PPU.js" ></script>
+    <script type="text/javascript" src="src/Controller.js" ></script>
     <title></title>
   </head>
   <body>
@@ -23,20 +24,27 @@
     .then((response) => {
       response.arrayBuffer().then(function(buffer) {
         nes.init(buffer, cxt);
-
-        var counter = Math.floor(341 * 262 / 3) * 9 ;
-        // var counter = 235874;
-        for(var i=0; i<counter ; i++) {
-          nes.ppu.cycles = i;
-          nes.cycles = i;
-          nes.run();
-          nes.ppu.run();
-          nes.ppu.run();
-          nes.ppu.run();
-        }
-
-        nes.dumpCPU();
+        start(nes);
       });
     });
+
+
+    function start(nes) {
+
+      var counter = Math.floor(341 * 262 / 3);
+      // var counter = 235874;
+      for(var i=0; i<counter ; i++) {
+        nes.ppu.cycles = i;
+        nes.cycles = i;
+        nes.run();
+        nes.ppu.run();
+        nes.ppu.run();
+        nes.ppu.run();
+      }
+
+      // nes.dumpCPU();
+      requestAnimationFrame(() => start(nes));
+
+    }
   </script>
 </html>

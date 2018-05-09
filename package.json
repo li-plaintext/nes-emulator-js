@@ -18,6 +18,7 @@
   },
   "homepage": "https://github.com/li-plaintext/nes-emulator-js#readme",
   "dependencies": {
-    "express": "^4.16.3"
+    "express": "^4.16.3",
+    "npm": "^6.0.0"
   }
 }

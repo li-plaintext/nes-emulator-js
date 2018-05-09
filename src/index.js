@@ -28,6 +28,9 @@ function NES() {
   this.rom = {}; // cartridge
 
   this.ppu = new PPU();
+  this.ctrl1 = new Controller();
+  this.ctrl2 = new Controller();
+
   this.opcObj = {}
 
   this.init = function(buffer, ctx) {
@@ -433,9 +436,6 @@ function NES() {
         this.flagN(result);
         break;
       case 'ROR':
-        if(this.cycles >= 235855 ){
-          console.log('cmp', this.cycles);
-        }
         debug('ROR');
         var memAddr, memValue, c, result;
         if (opcObj.addressing === 'ACCUMULATOR') {
@@ -796,7 +796,7 @@ function NES() {
 
       if(address >= 0x2000 && address < 0x4000){
         debug('readMemory address >= 0x2000 && address < 0x4000', address.toString(16));
-        return this.ppu.readRegisters(address);
+        return this.ppu.readRegisters(address & 0x2007);
       }
 
       // 0x4000 - 0x4017: APU, PPU and I/O registers
@@ -809,7 +809,7 @@ function NES() {
 
       if(address === 0x4014){
         // debug('readMemory address === 0x4014');
-        return this.memory[address];
+        return this.ppu.readRegisters(address);
       }
 
       if(address === 0x4015){
@@ -819,12 +819,12 @@ function NES() {
 
       if(address === 0x4016){
         // debug('readMemory address === 0x4016');
-        return this.memory[address];
+        return this.ctrl1.loadRegister();
       }
 
       if(address >= 0x4017 && address < 0x4020){
         // debug('readMemory address >= 0x4017 && address < 0x4020');
-        return this.memory[address];
+        // apu
       }
 
       // cartridge space
@@ -853,9 +853,6 @@ function NES() {
       // 0x0800 - 0x1FFF: Mirrors of 0x0000 - 0x07FF (repeats every 0x800 bytes)
 
       if(address >= 0 && address < 0x2000){
-        if(address === 1) {
-           console.log('writeMemory address >= 0 && address < 0x2000');
-        }
         this.memory[address & 0x07FF] = value;
       }
 
@@ -887,7 +884,7 @@ function NES() {
 
       if(address === 0x4016){
         // debug('writeMemory address === 0x4016');
-        // pad1
+        this.ctrl1.storeRegister(value);
       }
 
       if(address >= 0x4017 && address < 0x4020){

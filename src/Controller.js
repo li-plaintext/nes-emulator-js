@@ -1,0 +1,41 @@
+function Controller () {
+  // bit:   	 7     6     5     4     3     2     1     0
+  // button:	 A     B  Select Start  Up   Down  Left  Right
+
+  this.latch = 0;
+  this.currentButton = 0;
+  this.map = ['a', 'b', 'select', 'start', 'up', 'down', 'left', 'right'];
+  this.buttons = {
+    'a': false,
+    'b': false,
+    'select': false,
+    'start': false,
+    'up': false,
+    'down': false,
+    'left': false,
+    'right': false,
+  }
+
+  this.loadRegister = function() {
+    var button = this.latch === 1 ? 0 : this.currentButton++;
+    var value = (button >= 8 || this.buttons[this.map[button]]) ? 1 : 0;
+    return value;
+  }
+
+  this.storeRegister = function(value) {
+    value = value & 1;
+
+    if (value === 1)
+      this.currentButton = 0;
+
+    this.latch = value;
+  }
+
+  this.pressButton = function(type) {
+    this.buttons[type] = true;
+  }
+
+  this.releaseButton = function(type) {
+    this.buttons[type] = false;
+  }
+}
