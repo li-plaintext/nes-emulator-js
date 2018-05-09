@@ -38,4 +38,19 @@ function Controller () {
   this.releaseButton = function(type) {
     this.buttons[type] = false;
   }
+
+  this.getType = function(type) {
+    switch(type) {
+      case 'j': return 'a';
+      case 'h': return 'b';
+      case 'w': return 'up';
+      case 's': return 'down';
+      case 'a': return 'left';
+      case 'd': return 'right';
+      case '1': return 'start';
+      case '2': return 'select';
+      default: break;
+    }
+  }
+
 }

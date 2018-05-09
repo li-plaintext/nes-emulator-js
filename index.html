@@ -46,5 +46,16 @@
       requestAnimationFrame(() => start(nes));
 
     }
+
+    document.addEventListener('keydown', (event) => {
+      const type = nes.ctrl1.getType(event.key);
+      nes.ctrl1.pressButton(type);
+    }, false);
+
+    document.addEventListener('keyup', (event) => {
+      const type = nes.ctrl1.getType(event.key);
+      nes.ctrl1.releaseButton(type);
+    }, false);
+    
   </script>
 </html>
