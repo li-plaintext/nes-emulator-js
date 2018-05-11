@@ -30,7 +30,6 @@
 
 
     function start(nes) {
-
       var counter = Math.floor(341 * 262 / 3);
       // var counter = 235874;
       for(var i=0; i<counter ; i++) {
@@ -41,10 +40,8 @@
         nes.ppu.run();
         nes.ppu.run();
       }
-
       // nes.dumpCPU();
-      requestAnimationFrame(() => start(nes));
-
+      setTimeout(() => start(nes), 5);
     }
 
     document.addEventListener('keydown', (event) => {
@@ -56,6 +53,6 @@
       const type = nes.ctrl1.getType(event.key);
       nes.ctrl1.releaseButton(type);
     }, false);
-    
+
   </script>
 </html>
