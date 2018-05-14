@@ -106,31 +106,22 @@ function NES() {
 
       case 'BCC':
         debug('BCC');
-        this.memValue = this.readMemory(this.memAddr);
+        this.memValue = this.unsignedToSignedBy1Byte(this.readMemory(this.memAddr));
         if(this.getStatusRegister('C') === 0) {
-          if (this.memValue & 0x80) {
-            this.memValue |= 0xff00;
-          }
           this.writePC(this.pc + this.memValue);
         }
         break;
       case 'BCS':
         debug('BCS');
-        this.memValue = this.readMemory(this.memAddr);
+        this.memValue = this.unsignedToSignedBy1Byte(this.readMemory(this.memAddr));
         if(this.getStatusRegister('C') === 1) {
-          if (this.memValue & 0x80) {
-            this.memValue |= 0xff00;
-          }
           this.writePC(this.pc + this.memValue);
         }
         break;
       case 'BEQ':
         debug('BEQ');
-        this.memValue = this.readMemory(this.memAddr);
+        this.memValue = this.unsignedToSignedBy1Byte(this.readMemory(this.memAddr));
         if(this.getStatusRegister('Z') === 1) {
-          if (this.memValue & 0x80) {
-            this.memValue |= 0xff00;
-          }
           this.writePC(this.pc + this.memValue);
         }
         break;
@@ -144,31 +135,22 @@ function NES() {
         break;
       case 'BMI':
         debug('BMI');
-        this.memValue = this.readMemory(this.memAddr);
+        this.memValue = this.unsignedToSignedBy1Byte(this.readMemory(this.memAddr));
         if(this.getStatusRegister('N') === 1) {
-          if (this.memValue & 0x80) {
-            this.memValue |= 0xff00;
-          }
           this.writePC(this.pc + this.memValue);
         }
         break;
       case 'BNE':
         debug('BNE');
-        this.memValue = this.readMemory(this.memAddr);
+        this.memValue = this.unsignedToSignedBy1Byte(this.readMemory(this.memAddr));
         if(this.getStatusRegister('Z') === 0) {
-          if (this.memValue & 0x80) {
-            this.memValue |= 0xff00;
-          }
           this.writePC(this.pc + this.memValue);
         }
         break;
       case 'BPL':
         debug('BPL');
-        this.memValue = this.readMemory(this.memAddr);
+        this.memValue = this.unsignedToSignedBy1Byte(this.readMemory(this.memAddr));
         if(this.getStatusRegister('N') === 0) {
-          if (this.memValue & 0x80) {
-            this.memValue |= 0xff00;
-          }
           this.writePC(this.pc + this.memValue);
         }
         break;
@@ -179,21 +161,15 @@ function NES() {
         break;
       case 'BVC':
         debug('BVC');
-        this.memValue = this.readMemory(this.memAddr);
+        this.memValue = this.unsignedToSignedBy1Byte(this.readMemory(this.memAddr));
         if(this.getStatusRegister('V') === 0) {
-          if (this.memValue & 0x80) {
-            this.memValue |= 0xff00;
-          }
           this.writePC(this.pc + this.memValue);
         }
         break;
       case 'BVS':
         debug('BVS');
-        this.memValue = this.readMemory(this.memAddr);
+        this.memValue = this.unsignedToSignedBy1Byte(this.readMemory(this.memAddr));
         if(this.getStatusRegister('V') === 1) {
-          if (this.memValue & 0x80) {
-            this.memValue |= 0xff00;
-          }
           this.writePC(this.pc + this.memValue);
         }
         break;
@@ -556,6 +532,7 @@ function NES() {
 
       case 'RELATIVE':
         // Bytes 2
+        // this value is signed, values #00-#7F are positive, and values #FF-#80 are negative.
         this.LOCAL_RESULT = this.getPC();
         break;
 
@@ -734,6 +711,14 @@ function NES() {
     this.increaseS();
     this.LOCAL_LOW_BYTE = this.readMemory(this.s + 0x100);
     return (this.LOCAL_LOW_BYTE << 8) | this.LOCAL_HIGH_BYTE;
+  }
+
+  this.unsignedToSignedBy1Byte = function (value) {
+    if(value & 0x80) {
+      return value - 256;
+    } else {
+      return value;
+    }
   }
 
   this.readMemory = function (address) {
