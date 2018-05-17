@@ -17,7 +17,7 @@
     var cxt = document.querySelector('#mycanvas').getContext('2d');
     var nes = new NES();
 
-    fetch('http://localhost:3000/roms/test.nes',
+    fetch('http://localhost:3000/roms/tank.nes',
     { headers: {
        'Content-Type': 'image/jpeg'
     }})
@@ -31,8 +31,7 @@
 
     function start(nes) {
 
-      var counter = Math.floor(341 * 262 / 3);
-      // var counter = 235874;
+      var counter = Math.floor(341 * 262 / 3) * 8 + 29712
       for(var i=0; i<counter ; i++) {
         nes.ppu.cycles = i;
         nes.cycles = i;
@@ -41,9 +40,11 @@
         nes.ppu.run();
         nes.ppu.run();
       }
+      //
+      nes.consoleCPU();
+      console.log(Object.keys(nes.ppu.dup));
 
-      // nes.consoleCPU();
-      requestAnimationFrame(() => start(nes));
+      // requestAnimationFrame(() => start(nes));
 
     }
 
@@ -56,6 +57,6 @@
       const type = nes.ctrl1.getType(event.key);
       nes.ctrl1.releaseButton(type);
     }, false);
-    
+
   </script>
 </html>

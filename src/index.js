@@ -55,12 +55,16 @@ function NES() {
       'prg_ram_num': header[8],
       'flag_9': header[9],
       'trainer': trainer,
-      'mirroring': header[6] & 1 ==0 ? 'HORIZONTAL' : 'VERTICAL',
+      'mirroring': (header[6] & 1) === 0 ? 'HORIZONTAL' : 'VERTICAL',
     }
 
     this.rom.rowData = buffer;
     this.rom.header = header;
     this.rom.prg = new Uint8Array(buffer.slice(16, 16 + (this.length16K * this.rom.header.prg_num))) ;
+    this.rom.chr = new Uint8Array(buffer.slice(
+      16 + (this.length16K * this.rom.header.prg_num),
+      16 + (this.length16K * this.rom.header.prg_num) + (this.length8K * this.rom.header.chr_num)
+    )) ;
   }
 
   this.processInstruction = function(opcObj = {}) {
@@ -157,6 +161,7 @@ function NES() {
       case 'BRK':
         this.setStatusRegisterFlag('B', 1);
         this.increasePC();
+        this.interrupt('BRK');
         debug('BRK');
         break;
       case 'BVC':
@@ -251,6 +256,7 @@ function NES() {
         debug('EOR');
         this.memValue = this.readMemory(this.memAddr);
         this.result = this.a ^ this.memValue;
+        this.writeA(this.result);
         this.flagZ(this.result);
         this.flagN(this.result);
         break;
@@ -467,15 +473,15 @@ function NES() {
         break;
       case 'TAY':
         debug('TAY');
-        this.writeX(this.y);
-        this.flagN(this.y);
-        this.flagZ(this.y);
+        this.writeY(this.a);
+        this.flagN(this.a);
+        this.flagZ(this.a);
         break;
       case 'TSX':
         debug('TSX');
-        this.s = this.x;
-        this.flagN(this.x);
-        this.flagZ(this.x);
+        this.writeX(this.s);
+        this.flagN(this.s);
+        this.flagZ(this.s);
         break;
       case 'TXA':
         debug('TXA');
@@ -780,7 +786,7 @@ function NES() {
       // 0x8000 - 0xFFFF: ROM
       if(address >= 0x8000 && address < 0x10000) {
         // debug('readMemory address >= 0x8000 && address < 0x10000');
-        var mappedAddr = this.mapper.map(address, this.rom.header);
+        var mappedAddr = this.mapper.prgMap(address, this.rom.header);
 
         return this.rom.prg[mappedAddr];
       }
@@ -845,7 +851,7 @@ function NES() {
       // 0x8000 - 0xFFFF: ROM
       if(address >= 0x8000 && address < 0x10000) {
         // debug('writeMemory address >= 0x8000 && address < 0x10000');
-        var mappedAddr = this.mapper.map(address, this.rom.header);
+        var mappedAddr = this.mapper.prgMap(address, this.rom.header);
         this.rom.prg[mappedAddr] = value;
       }
   }

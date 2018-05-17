@@ -400,9 +400,14 @@ function PPU() {
 
     address = address & 0x3FFF;  // just in case
 
+    if(address === 11362 ) {
+      console.log(address);
+    }
+
     if(address < 0x2000 && this.rom.header.chr_num !== 0) {
-      var mappedAddr = this.mapper.map(address, this.rom.header);
-      return this.rom.prg[mappedAddr];
+      var mappedAddr = this.mapper.chrMap(address, this.rom.header);
+      this.dup[address] = this.rom.chr[mappedAddr];
+      return this.rom.chr[mappedAddr];
     }
 
     if(address >= 0x2000 && address < 0x3F00)
@@ -435,10 +440,14 @@ function PPU() {
     // 0x3000 - 0x3EFF: mirror of nametable 0-3
     // 0x3F00 - 0x3F1F: palette
     // 0x3F20 - 0x3FFF: mirror of palette
+    //
+    if(value === 94 ) {
+      console.log(address);
+    }
 
     if(address < 0x2000 && this.rom.header.chr_num !== 0) {
-      var mappedAddr = this.mapper.map(address, this.rom.header);
-      this.rom.prg[mappedAddr] = value;
+      var mappedAddr = this.mapper.chrMap(address, this.rom.header);
+      this.rom.chr[mappedAddr] = value;
       return;
     }
 
@@ -567,8 +576,6 @@ function PPU() {
 
     var hexIndex = this.readMemory(0x3F00 + index);
 
-    this.dup[hexIndex] = hexIndex;
-
     return this.palette[hexIndex];
   }
   this.render = function() {
@@ -586,7 +593,8 @@ function PPU() {
     var spriteId = this.spriteIds[x];
     var spritePriority = this.spritePriorities[x];
 
-    var c = 0;
+    var c = this.palette[this.readMemory(0x3F00)];
+
 
     // TODO: fix me
 
@@ -773,6 +781,9 @@ function PPU() {
 
   this.fetchNameTable = function() {
     this.nameTableLatch = this.readMemory(0x2000 | (this.currentVRamAddress & 0x0FFF));
+    if(this.cycles >= 267950) {
+      console.log('haha 1', (0x2000 | (this.currentVRamAddress & 0x0FFF)) );
+    }
   },
 
   this.fetchAttributeTable = function() {
@@ -802,7 +813,9 @@ function PPU() {
     var fineY = (this.currentVRamAddress >> 12) & 0x7;
     var index = this.getPPUCTRL('B') * 0x1000 +
                   this.nameTableRegister.value * 0x10 + fineY;
-
+        if(this.cycles === 267951) {
+          console.log('haha');
+        }
     this.patternTableLowLatch = this.readMemory(index);
   },
 
@@ -825,7 +838,7 @@ function PPU() {
         this.oamRam2[i] = 0xFF;
 
     } else if(this.cycle === 65) {
-      var height = this.getPPUCTRL('H') ? 16 : 8;
+      var height = this.getPPUCTRL('H') === 1 ? 16 : 8;
       var n = 0;
 
       for(var i = 0, len = this.sprites.length; i < len; i++) {
@@ -882,8 +895,6 @@ function PPU() {
           var pIndex = (msb << 2) | lsb;
 
           if(this.spritePixels[x] === -1) {
-            this.dup[this.readMemory(0x3F10 + pIndex)] = this.readMemory(0x3F10 + pIndex);
-
             this.spritePixels[x] = this.palette[this.readMemory(0x3F10 + pIndex)];
             this.spriteIds[x] = s.getId();
             this.spritePriorities[x] = s.getPriority();
@@ -899,7 +910,7 @@ function PPU() {
 
     if(ySize === 8) {
       var ay = y % 8;
-      var offset = this.getPPUCTRL('B') === 1 ? 0x1000 : 0;
+      var offset = this.getPPUCTRL('S') === 1 ? 0x1000 : 0;
       a = this.readMemory(offset + index * 0x10 + ay);
       b = this.readMemory(offset + index * 0x10 + 0x8 + ay);
     } else {
