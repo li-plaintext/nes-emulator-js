@@ -31,7 +31,7 @@
 
     function start(nes) {
 
-      var counter = Math.floor(341 * 262 / 3) * 8 + 29712
+      var counter = Math.floor(341 * 262 / 3) * 100
       for(var i=0; i<counter ; i++) {
         nes.ppu.cycles = i;
         nes.cycles = i;
@@ -40,7 +40,7 @@
         nes.ppu.run();
         nes.ppu.run();
       }
-      //
+
       nes.consoleCPU();
       console.log(Object.keys(nes.ppu.dup));
 

@@ -99,10 +99,15 @@ function NES() {
       case 'ASL':
         // arithemetic shift left
         debug('ASL');
-        this.memValue = opcObj.addressing === 'ACCUMULATOR' ?
-          this.a : this.readMemory(this.memAddr);
-        this.result = this.memValue << 1;
-        this.writeA(this.result);
+        if (opcObj.addressing === 'ACCUMULATOR') {
+          this.memValue = this.a;
+          this.result = this.memValue << 1;
+          this.writeA(this.result);
+        } else {
+          this.memValue = this.readMemory(this.memAddr);
+          this.result = this.memValue << 1;
+          this.writeMemory(this.memAddr, this.result);
+        }
         this.flagZ(this.result);
         this.flagN(this.result);
         this.flagC(this.result);
@@ -230,9 +235,15 @@ function NES() {
         break;
       case 'DEC':
         debug('DEC');
-        this.memValue = this.readMemory(this.memAddr);
-        this.result = this.memValue - 1;
-        this.writeMemory(this.memAddr, this.result);
+        if (opcObj.addressing === 'ACCUMULATOR') {
+          this.memValue = this.a;
+          this.result = this.memValue - 1;
+          this.writeA(this.result);
+        } else {
+          this.memValue = this.readMemory(this.memAddr);
+          this.result = this.memValue - 1;
+          this.writeMemory(this.memAddr, this.result);
+        }
         this.flagZ(this.result);
         this.flagN(this.result);
         break;
@@ -263,9 +274,15 @@ function NES() {
 
       case 'INC':
         debug('INC');
-        this.memValue = this.readMemory(this.memAddr);
-        this.result = this.memValue + 1;
-        this.writeMemory(this.memAddr, this.result);
+        if (opcObj.addressing === 'ACCUMULATOR') {
+          this.memValue = this.a;
+          this.result = this.memValue + 1;
+          this.writeA(this.result);
+        } else {
+          this.memValue = this.readMemory(this.memAddr);
+          this.result = this.memValue + 1;
+          this.writeMemory(this.memAddr, this.result);
+        }
         this.flagZ(this.result);
         this.flagN(this.result);
         break;
@@ -325,7 +342,6 @@ function NES() {
           this.result = this.memValue >> 1;
           this.writeA(this.result);
         } else {
-          ;
           this.memValue = this.readMemory(this.memAddr);
           this.result = this.memValue >> 1;
           this.writeMemory(this.memAddr, this.result);
@@ -357,7 +373,7 @@ function NES() {
         debug('PHP');
         this.setStatusRegisterFlag('-',1);
         this.setStatusRegisterFlag('B',1);
-        this.pushToStack(this.p);
+        this.pushToStack(this.getStatusRegisterValue());
         break;
       case 'PLA':
         debug('PLA');
@@ -423,11 +439,8 @@ function NES() {
       case 'SBC':
         debug('SBC');
         this.memValue = this.readMemory(this.memAddr);
-        this.carry = this.getStatusRegister('C');
+        this.carry = this.getStatusRegister('C') === 1? 0 : 1;
         this.result = this.a - this.memValue - this.carry;
-        this.writeA(this.result);
-        this.flagN(this.memValue);
-        this.flagZ(this.result);
         if(this.a >= this.memValue + this.carry)
           this.setStatusRegisterFlag('C', 1);
         else
@@ -437,6 +450,9 @@ function NES() {
           this.setStatusRegisterFlag('V', 1);
         else
           this.setStatusRegisterFlag('V', 0);
+        this.writeA(this.result);
+        this.flagN(this.memValue);
+        this.flagZ(this.result);
 
         break;
       case 'SEC':
@@ -899,6 +915,7 @@ function NES() {
     console.log('this.pc ->', this.pc);
     console.log('this.s ->', this.s);
     console.log('this.status(p) ->', parseInt(([].concat(this.p)).reverse().join(''), 2));
+    console.log('this.cpu.memory ->', this.memory.reduce((res, i) => { res += i; return res}, 0 ));
     console.log('this.ppu ->', this.ppu);
     console.log('this.OAMADDR ->', this.ppu.OAMADDR.value);
     console.log('this.OAMDMA ->', this.ppu.OAMDMA.value);
@@ -908,7 +925,10 @@ function NES() {
     console.log('this.PPUMASK ->', this.ppu.PPUMASK.value);
     console.log('this.PPUSCROLL ->', this.ppu.PPUSCROLL.value);
     console.log('this.PPUSTATUS ->', this.ppu.PPUSTATUS.value);
-    console.log('this.dup ->', this.ppu.dup);
+    console.log('this.currentVRamAddress ->', this.ppu.currentVRamAddress);
+    console.log('this.ppu.memory ->', this.ppu.memory.reduce((res, i) => { res += i; return res}, 0 ));
+    console.log('this.memory ->', this.ppu.memory);
+
   }
 
 }

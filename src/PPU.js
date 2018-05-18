@@ -441,9 +441,6 @@ function PPU() {
     // 0x3F00 - 0x3F1F: palette
     // 0x3F20 - 0x3FFF: mirror of palette
     //
-    if(value === 94 ) {
-      console.log(address);
-    }
 
     if(address < 0x2000 && this.rom.header.chr_num !== 0) {
       var mappedAddr = this.mapper.chrMap(address, this.rom.header);
@@ -781,9 +778,6 @@ function PPU() {
 
   this.fetchNameTable = function() {
     this.nameTableLatch = this.readMemory(0x2000 | (this.currentVRamAddress & 0x0FFF));
-    if(this.cycles >= 267950) {
-      console.log('haha 1', (0x2000 | (this.currentVRamAddress & 0x0FFF)) );
-    }
   },
 
   this.fetchAttributeTable = function() {
@@ -813,9 +807,6 @@ function PPU() {
     var fineY = (this.currentVRamAddress >> 12) & 0x7;
     var index = this.getPPUCTRL('B') * 0x1000 +
                   this.nameTableRegister.value * 0x10 + fineY;
-        if(this.cycles === 267951) {
-          console.log('haha');
-        }
     this.patternTableLowLatch = this.readMemory(index);
   },
 
