@@ -31,31 +31,41 @@
 
     function start(nes) {
 
-      var counter = Math.floor(341 * 262 / 3) * 100
+      var counter = Math.floor(341 * 262 / 3)
       for(var i=0; i<counter ; i++) {
         nes.ppu.cycles = i;
         nes.cycles = i;
         nes.run();
+
+        nes.ppu.sub = 1;
         nes.ppu.run();
+        nes.ppu.sub = 2;
         nes.ppu.run();
+        nes.ppu.sub = 3;
         nes.ppu.run();
       }
 
-      nes.consoleCPU();
-      console.log(Object.keys(nes.ppu.dup));
+      // nes.consoleCPU();
+      // console.log(nes.ppu.dup);
 
-      // requestAnimationFrame(() => start(nes));
+      requestAnimationFrame(() => start(nes));
 
     }
 
     document.addEventListener('keydown', (event) => {
-      const type = nes.ctrl1.getType(event.key);
-      nes.ctrl1.pressButton(type);
+      const type1 = nes.ctrl1.getType1(event.key);
+      type1 && nes.ctrl1.pressButton(type1);
+
+      const type2 = nes.ctrl2.getType2(event.key);
+      type2 && nes.ctrl2.pressButton(type2);
     }, false);
 
     document.addEventListener('keyup', (event) => {
-      const type = nes.ctrl1.getType(event.key);
-      nes.ctrl1.releaseButton(type);
+      const type1 = nes.ctrl1.getType1(event.key);
+      type1 && nes.ctrl1.releaseButton(type1);
+
+      const type2 = nes.ctrl2.getType2(event.key);
+      type2 && nes.ctrl2.releaseButton(type2);
     }, false);
 
   </script>

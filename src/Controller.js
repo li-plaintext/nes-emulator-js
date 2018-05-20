@@ -39,8 +39,10 @@ function Controller () {
     this.buttons[type] = false;
   }
 
-  this.getType = function(type) {
-    switch(type) {
+  this.getType1 = function(type) {
+
+      switch(type) {
+      // player 1
       case 'j': return 'a';
       case 'h': return 'b';
       case 'w': return 'up';
@@ -49,6 +51,20 @@ function Controller () {
       case 'd': return 'right';
       case '1': return 'start';
       case '2': return 'select';
+      default: break;
+    }
+  }
+
+  this.getType2 = function(type) {
+
+      switch(type) {
+      // player 2
+      case 'n': return 'a';
+      case 'm': return 'b';
+      case 'ArrowUp': return 'up';
+      case 'ArrowDown': return 'down';
+      case 'ArrowLeft': return 'left';
+      case 'ArrowRight': return 'right';
       default: break;
     }
   }

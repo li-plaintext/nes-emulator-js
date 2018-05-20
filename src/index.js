@@ -782,7 +782,12 @@ function NES() {
         return this.ctrl1.loadRegister();
       }
 
-      if(address >= 0x4017 && address < 0x4020){
+      if(address === 0x4017){
+        // debug('readMemory address === 0x4017');
+        // return this.ctrl2.loadRegister();
+      }
+
+      if(address > 0x4017 && address < 0x4020){
         // debug('readMemory address >= 0x4017 && address < 0x4020');
         // apu
       }
@@ -846,8 +851,12 @@ function NES() {
         // debug('writeMemory address === 0x4016');
         this.ctrl1.storeRegister(value);
       }
+      if(address === 0x4017){
+        // debug('writeMemory address === 0x4017');
+        // this.ctrl2.storeRegister(value);
+      }
 
-      if(address >= 0x4017 && address < 0x4020){
+      if(address > 0x4017 && address < 0x4020){
         // debug('writeMemory address >= 0x4017 && address < 0x4020');
         // apu
       }

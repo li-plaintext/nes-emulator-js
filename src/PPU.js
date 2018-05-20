@@ -94,7 +94,22 @@ function PPU() {
   }
 
   this.run = function () {
-    // console.log('ppu run');
+    // if(this.cycles >= 1188619) {
+    //   console.log('------------------'+ this.sub +'-------------------');
+    //
+    //   console.log('this.attributeTableLowLatch ->', this.attributeTableLowLatch);
+    //   console.log('this.attributeTableHighLatch ->', this.attributeTableHighLatch);
+    //   console.log('this.patternTableLowLatch ->', this.patternTableLowLatch);
+    //   console.log('this.patternTableHighLatch ->', this.patternTableHighLatch);
+    //
+    //   console.log('this.attributeTableLowRegister ->', this.attributeTableLowRegister.value);
+    //   console.log('this.attributeTableHighRegister ->', this.attributeTableHighRegister.value);
+    //   console.log('this.patternTableLowRegister ->', this.patternTableLowRegister.value);
+    //   console.log('this.patternTableHighRegister ->', this.patternTableHighRegister.value);
+    //
+    //   if(this.sub === 3) throw Error('xxx');
+    // }
+
     this.render();
     this.updateShiftRegisters();
     this.fetch();
@@ -400,13 +415,8 @@ function PPU() {
 
     address = address & 0x3FFF;  // just in case
 
-    if(address === 11362 ) {
-      console.log(address);
-    }
-
     if(address < 0x2000 && this.rom.header.chr_num !== 0) {
       var mappedAddr = this.mapper.chrMap(address, this.rom.header);
-      this.dup[address] = this.rom.chr[mappedAddr];
       return this.rom.chr[mappedAddr];
     }
 
@@ -544,27 +554,29 @@ function PPU() {
   this.loadBit = function(register, index) {
     return (register.value >> index) & 1;
   }
-  this.loadLowerByte = function(register, value) {
-    let lowerByte = (value << 8) & 0xff00;
-    let highByte = register.value & 0xff;
-    return highByte | lowerByte;
+  this.writeLowerByte = function(register, value) {
+    // TODO no idea
+    let lowerByte = register.value & 0xff00;
+    let highByte = value & 0xff;
+    // return highByte | lowerByte;
+    register.value = lowerByte | highByte;;
   }
 
   this.shift = function(register, value) {
     value = value & 1;  // just in case
     var carry = this.loadBit(register, register.arr.length - 1);
-    register.value = (register.value << 1) | value;
+    register.value = ((register.value << 1) & 0xffff) | value;
     return carry;
   },
   this.getBackgroundPixel = function() {
 
     var offset = 15 - this.fineXScroll;
 
-    var lsb = (this.loadBit(this.patternTableHighRegister.value, offset) << 1) |
-                this.loadBit(this.patternTableLowRegister.value, offset);
+    var lsb = (this.loadBit(this.patternTableHighRegister, offset) << 1) |
+                this.loadBit(this.patternTableLowRegister, offset);
 
-    var msb = (this.loadBit(this.attributeTableHighRegister.value, offset) << 1) |
-                this.loadBit(this.attributeTableLowRegister.value, offset);
+    var msb = (this.loadBit(this.attributeTableHighRegister, offset) << 1) |
+                this.loadBit(this.attributeTableLowRegister, offset);
 
     var index = (msb << 2) | lsb;
 
@@ -624,7 +636,10 @@ function PPU() {
 
     if(backgroundVisible === 1 && spritesVisible === 1 &&
        spriteId === 0 && spritePixel !== 0 && backgroundPixel !== 0)
-      this.getPPUSTATUS('S');
+      this.setPPUSTATUS('S', 1);
+
+    if(c !== 0xff000000 && c !== 0xff757575)
+      this.dup[c] = c;
 
     this.setCanvasdata(x, y, c);
   }
@@ -769,10 +784,10 @@ function PPU() {
 
     if(this.cycle % 8 === 1) {
       this.nameTableRegister.value = this.nameTableLatch;
-      this.loadLowerByte(this.attributeTableLowRegister, this.attributeTableLowLatch);
-      this.loadLowerByte(this.attributeTableHighRegister, this.attributeTableHighLatch);
-      this.loadLowerByte(this.patternTableLowRegister, this.patternTableLowLatch);
-      this.loadLowerByte(this.patternTableHighRegister, this.patternTableHighLatch);
+      this.writeLowerByte(this.attributeTableLowRegister, this.attributeTableLowLatch);
+      this.writeLowerByte(this.attributeTableHighRegister, this.attributeTableHighLatch);
+      this.writeLowerByte(this.patternTableLowRegister, this.patternTableLowLatch);
+      this.writeLowerByte(this.patternTableHighRegister, this.patternTableHighLatch);
     }
   }
 
@@ -801,6 +816,7 @@ function PPU() {
 
     this.attributeTableHighLatch = highBit === 1 ? 0xff : 0;
     this.attributeTableLowLatch = lowBit === 1 ? 0xff : 0;
+
   },
 
   this.fetchPatternTableLow = function() {
@@ -808,6 +824,7 @@ function PPU() {
     var index = this.getPPUCTRL('B') * 0x1000 +
                   this.nameTableRegister.value * 0x10 + fineY;
     this.patternTableLowLatch = this.readMemory(index);
+
   },
 
   this.fetchPatternTableHigh = function() {
