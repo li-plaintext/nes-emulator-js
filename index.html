@@ -7,66 +7,177 @@
     <script type="text/javascript" src="src/Mappers.js" ></script>
     <script type="text/javascript" src="src/PPU.js" ></script>
     <script type="text/javascript" src="src/Controller.js" ></script>
+    <link rel="stylesheet" type="text/css" href="statics/main.css" ></link>
     <title></title>
   </head>
   <body>
-    <canvas id="mycanvas" width="256" height="240"
-              style="width:30rem; height:30rem;"></canvas>
+    <div class="header">
+      <div>Select game first:</div>
+      <div onclick="changeGames('tank')">Tank</div>
+      <div onclick="changeGames('pooyan')">Pig</div>
+      <div onclick="changeGames('1942')">1942</div>
+      <div onclick="changeGames('bombman')">BombMan</div>
+      <div onclick="changeGames('test')">noIdea</div>
+    </div>
+    <div class="subtitle">
+      <div>Refresh before inteded to switch games</div>
+    </div>
+    <div>
+      <canvas id="mycanvas" width="256" height="240" class="canvas"/>
+    </div>
+
+    <div class="joypad">
+      <div id="controller" class="controller">
+        <div class="panel">
+            <div class="left-container">
+                <div class="dpad-backdrop"></div>
+                <div id="up" class="dpad dpad-up">
+                    <div class="arrow-up"></div>
+                    <div class="arrow-up2"></div>
+                </div>
+                <div id="right" class="dpad dpad-right">
+                    <div class="arrow-right2"></div>
+                    <div class="arrow-right"></div>
+                </div>
+                <div id="down" class="dpad dpad-down">
+                    <div class="arrow-down2"></div>
+                    <div class="arrow-down"></div>
+                </div>
+                <div id="left" class="dpad dpad-left">
+                    <div class="arrow-left"></div>
+                    <div class="arrow-left2"></div>
+                </div>
+                <div class="dpad dpad-center"></div>
+            </div>
+            <div class="right-container">
+                <div id="button-B" class="buttons">B</div>
+                <div id="button-A" class="buttons">A</div>
+            </div>
+            <div class="select-container">
+                <div id="start" class="buttons-ctrl" >start</div>
+                <div id="select" class="buttons-ctrl" >select</div>
+            </div>
+        </div>
+      </div>
+    </div>
+
   </body>
   <script type="text/javascript">
-    var cxt = document.querySelector('#mycanvas').getContext('2d');
-    var nes = new NES();
+    function startGame(name) {
+      window.start = true;
 
-    fetch('https://li-plaintext.github.io/nes-emulator-js/roms/tank.nes',
-    { headers: {
-       'Content-Type': 'image/jpeg'
-    }})
-    .then((response) => {
-      response.arrayBuffer().then(function(buffer) {
-        nes.init(buffer, cxt);
-        start(nes);
+      var cxt = document.querySelector('#mycanvas').getContext('2d');
+      var nes = new NES();
+
+      fetch(`https://li-plaintext.github.io/nes-emulator-js/roms/${name}.nes`,
+      { headers: {
+         'Content-Type': 'image/jpeg'
+      }})
+      .then((response) => {
+        response.arrayBuffer().then(function(buffer) {
+          nes.init(buffer, cxt);
+          start(nes);
+          bindKeys(nes);
+        });
       });
-    });
 
-
-    function start(nes) {
-
-      var counter = Math.floor(341 * 262 / 3)
-      for(var i=0; i<counter ; i++) {
-        nes.ppu.cycles = i;
-        nes.cycles = i;
-        nes.run();
-
-        nes.ppu.sub = 1;
-        nes.ppu.run();
-        nes.ppu.sub = 2;
-        nes.ppu.run();
-        nes.ppu.sub = 3;
-        nes.ppu.run();
+      function start(nes) {
+        var counter = Math.floor(341 * 262 / 3)
+        for(var i=0; i<counter ; i++) {
+          nes.run();
+          nes.ppu.run();
+          nes.ppu.run();
+          nes.ppu.run();
+        }
+        // nes.consoleCPU();
+        // console.log(nes.ppu.dup);
+        requestAnimationFrame(() => start(nes));
       }
-
-      // nes.consoleCPU();
-      // console.log(nes.ppu.dup);
-
-      requestAnimationFrame(() => start(nes));
-
     }
 
-    document.addEventListener('keydown', (event) => {
-      const type1 = nes.ctrl1.getType1(event.key);
-      type1 && nes.ctrl1.pressButton(type1);
+    function changeGames(name) {
+      if(window.start === true) return;
+      startGame(name);
+    }
 
-      const type2 = nes.ctrl2.getType2(event.key);
-      type2 && nes.ctrl2.pressButton(type2);
-    }, false);
+    function bindKeys(nes) {
+      document.addEventListener('keydown', (event) => {
+        const type1 = nes.ctrl1.getType1(event.key);
+        type1 && nes.ctrl1.pressButton(type1);
+      }, false);
 
-    document.addEventListener('keyup', (event) => {
-      const type1 = nes.ctrl1.getType1(event.key);
-      type1 && nes.ctrl1.releaseButton(type1);
+      document.addEventListener('keyup', (event) => {
+        const type1 = nes.ctrl1.getType1(event.key);
+        type1 && nes.ctrl1.releaseButton(type1);
+      }, false);
 
-      const type2 = nes.ctrl2.getType2(event.key);
-      type2 && nes.ctrl2.releaseButton(type2);
-    }, false);
+      document.querySelector('#start').addEventListener('click', (event) => {
+        const type1 = nes.ctrl1.getType1('1');
+        type1 && nes.ctrl1.releaseButton(type1);
+      }, false);
+      document.querySelector('#start').addEventListener('mousedown', (event) => {
+        const type1 = nes.ctrl1.getType1('1');
+        type1 && nes.ctrl1.pressButton(type1);
+      }, false);
+      document.querySelector('#select').addEventListener('click', (event) => {
+        const type1 = nes.ctrl1.getType1('2');
+        type1 && nes.ctrl1.releaseButton(type1);
+      }, false);
+      document.querySelector('#select').addEventListener('mousedown', (event) => {
+        const type1 = nes.ctrl1.getType1('2');
+        type1 && nes.ctrl1.pressButton(type1);
+      }, false);
+
+      document.querySelector('#button-B').addEventListener('click', (event) => {
+        const type1 = nes.ctrl1.getType1('h');
+        type1 && nes.ctrl1.releaseButton(type1);
+      }, false);
+      document.querySelector('#button-B').addEventListener('mousedown', (event) => {
+        const type1 = nes.ctrl1.getType1('h');
+        type1 && nes.ctrl1.pressButton(type1);
+      }, false);
+      document.querySelector('#button-A').addEventListener('click', (event) => {
+        const type1 = nes.ctrl1.getType1('j');
+        type1 && nes.ctrl1.releaseButton(type1);
+      }, false);
+      document.querySelector('#button-A').addEventListener('mousedown', (event) => {
+        const type1 = nes.ctrl1.getType1('j');
+        type1 && nes.ctrl1.pressButton(type1);
+      }, false);
+
+      document.querySelector('#up').addEventListener('click', (event) => {
+        const type1 = nes.ctrl1.getType1('w');
+        type1 && nes.ctrl1.releaseButton(type1);
+      }, false);
+      document.querySelector('#up').addEventListener('mousedown', (event) => {
+        const type1 = nes.ctrl1.getType1('w');
+        type1 && nes.ctrl1.pressButton(type1);
+      }, false);
+      document.querySelector('#down').addEventListener('click', (event) => {
+        const type1 = nes.ctrl1.getType1('s');
+        type1 && nes.ctrl1.releaseButton(type1);
+      }, false);
+      document.querySelector('#down').addEventListener('mousedown', (event) => {
+        const type1 = nes.ctrl1.getType1('s');
+        type1 && nes.ctrl1.pressButton(type1);
+      }, false);
+      document.querySelector('#left').addEventListener('click', (event) => {
+        const type1 = nes.ctrl1.getType1('a');
+        type1 && nes.ctrl1.releaseButton(type1);
+      }, false);
+      document.querySelector('#left').addEventListener('mousedown', (event) => {
+        const type1 = nes.ctrl1.getType1('a');
+        type1 && nes.ctrl1.pressButton(type1);
+      }, false);
+      document.querySelector('#right').addEventListener('click', (event) => {
+        const type1 = nes.ctrl1.getType1('d');
+        type1 && nes.ctrl1.releaseButton(type1);
+      }, false);
+      document.querySelector('#right').addEventListener('click', (event) => {
+        const type1 = nes.ctrl1.getType1('d');
+        type1 && nes.ctrl1.pressButton(type1);
+      }, false);
+    }
 
   </script>
 </html>

@@ -14,5 +14,8 @@ app.get('/src/:file', function(req, res){
 app.get('/roms/:file', function(req, res){
   res.sendFile(__dirname + '/roms/' + req.params.file);
 });
+app.get('/statics/:file', function(req, res){
+  res.sendFile(__dirname + '/statics/' + req.params.file);
+});
 
 app.listen(3000);
