@@ -173,7 +173,7 @@
         const type1 = nes.ctrl1.getType1('d');
         type1 && nes.ctrl1.releaseButton(type1);
       }, false);
-      document.querySelector('#right').addEventListener('touchend', (event) => {
+      document.querySelector('#right').addEventListener('touchstart', (event) => {
         const type1 = nes.ctrl1.getType1('d');
         type1 && nes.ctrl1.pressButton(type1);
       }, false);
