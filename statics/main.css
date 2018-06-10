@@ -18,6 +18,12 @@
   justify-content: space-around;
   font-size: 10px;
 }
+.subtitle-1 {
+  display: flex;
+  color: #9a9a9a;
+  justify-content: space-around;
+  font-size: 14px;
+}
 
 body {
   background: #1B1C1D;
